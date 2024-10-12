@@ -48,17 +48,17 @@ pub fn view(model: Model) -> element.Element(Msg) {
     [
       attribute.id("view-lists"),
       attribute.class(
-        "flex flex-col md:flex-row  m-auto gap-4 justify-center items-center self-center h-full",
+        "flex flex-col md:flex-row m-auto gap-4 px-4 items-center",
       ),
     ],
     [
-      html.div([attribute.id("left-list"), attribute.class("w-96 h-full")], [
+      html.div([attribute.id("left-list")], [
         html.div([], [
           html.textarea(
             [
               attribute.id("elements-left-list"),
               attribute.class(
-                "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200",
+                "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200",
               ),
               event.on_input(UserLeftListTyping),
             ],
@@ -129,7 +129,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
             [
               attribute.id("elements-right-list"),
               attribute.class(
-                "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200",
+                "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200",
               ),
               event.on_input(UserRightListTyping),
             ],

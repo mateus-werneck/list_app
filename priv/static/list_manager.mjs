@@ -2731,12 +2731,12 @@ function view(model) {
     toList([
       id("view-lists"),
       class$(
-        "flex flex-col md:flex-row  m-auto gap-4 justify-center items-center self-center h-full"
+        "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
       )
     ]),
     toList([
       div(
-        toList([id("left-list"), class$("w-96 h-full")]),
+        toList([id("left-list")]),
         toList([
           div(
             toList([]),
@@ -2745,7 +2745,7 @@ function view(model) {
                 toList([
                   id("elements-left-list"),
                   class$(
-                    "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200"
+                    "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200"
                   ),
                   on_input(
                     (var0) => {
@@ -2835,7 +2835,7 @@ function view(model) {
                 toList([
                   id("elements-right-list"),
                   class$(
-                    "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200"
+                    "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200"
                   ),
                   on_input(
                     (var0) => {
