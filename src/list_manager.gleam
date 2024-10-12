@@ -48,41 +48,39 @@ pub fn view(model: Model) -> element.Element(Msg) {
     [
       attribute.id("view-lists"),
       attribute.class(
-        "flex flex-row m-auto gap-4 justify-center items-center self-center h-full",
+        "flex flex-col md:flex-row  m-auto gap-4 justify-center items-center self-center h-full",
       ),
     ],
     [
-      html.div([attribute.id("left-list"), attribute.class("w-96 h-48")], [
-        html.div(
-          [
-            attribute.id("title-left-list"),
-            attribute.class(
-              "flex flex-row gap-4 items-center font-bold p-4 bg-emerald-400",
-            ),
-          ],
-          [
-            html.span([attribute.class("flex-1")], [element.text("Lista Um")]),
-            html.span(
-              [
-                attribute.id("counter-left-list"),
-                attribute.class(
-                  "bg-emerald-800 text-white text-lg p-2 rounded-md",
-                ),
-              ],
-              [element.text(left_count)],
-            ),
-          ],
-        ),
-        html.textarea(
-          [
-            attribute.id("elements-left-list"),
-            attribute.class(
-              "w-full h-full p-2 outline-none bg-white border-l-2 border-r-2 border-slate-200",
-            ),
-            event.on_input(UserLeftListTyping),
-          ],
-          left_text,
-        ),
+      html.div([attribute.id("left-list"), attribute.class("w-96 h-full")], [
+        html.div([], [
+          html.textarea(
+            [
+              attribute.id("elements-left-list"),
+              attribute.class(
+                "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200",
+              ),
+              event.on_input(UserLeftListTyping),
+            ],
+            left_text,
+          ),
+          html.span(
+            [
+              attribute.id("left-list-counter"),
+              case left_count == "0" {
+                True ->
+                  attribute.class(
+                    "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end",
+                  )
+                False ->
+                  attribute.class(
+                    "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end",
+                  )
+              },
+            ],
+            [element.text(left_count)],
+          ),
+        ]),
         html.div(
           [
             attribute.id("actions-left-list"),
@@ -107,7 +105,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
           ],
         ),
       ]),
-      html.div([attribute.class("flex flex-col h-48")], [
+      html.div([attribute.class("flex flex-col h-1/2")], [
         html.div([attribute.class("flex-1")], []),
         html.button(
           [
@@ -125,37 +123,35 @@ pub fn view(model: Model) -> element.Element(Msg) {
           ],
         ),
       ]),
-      html.div([attribute.id("right-list"), attribute.class("w-96 h-48")], [
-        html.div(
-          [
-            attribute.id("title-right-list"),
-            attribute.class(
-              "flex flex-row gap-4 items-center font-bold p-4 bg-emerald-400",
-            ),
-          ],
-          [
-            html.span([attribute.class("flex-1")], [element.text("Lista Dois")]),
-            html.span(
-              [
-                attribute.id("counter-right-list"),
-                attribute.class(
-                  "bg-emerald-800 text-white text-lg p-2 rounded-md",
-                ),
-              ],
-              [element.text(right_count)],
-            ),
-          ],
-        ),
-        html.textarea(
-          [
-            attribute.id("elements-right-list"),
-            attribute.class(
-              "w-full h-full p-2 outline-none bg-white border-l-2 border-r-2 border-slate-200",
-            ),
-            event.on_input(UserRightListTyping),
-          ],
-          right_text,
-        ),
+      html.div([attribute.id("right-list")], [
+        html.div([], [
+          html.textarea(
+            [
+              attribute.id("elements-right-list"),
+              attribute.class(
+                "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200",
+              ),
+              event.on_input(UserRightListTyping),
+            ],
+            right_text,
+          ),
+          html.span(
+            [
+              attribute.id("right-list-counter"),
+              case left_count == "0" {
+                True ->
+                  attribute.class(
+                    "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end",
+                  )
+                False ->
+                  attribute.class(
+                    "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end",
+                  )
+              },
+            ],
+            [element.text(right_count)],
+          ),
+        ]),
         html.div(
           [
             attribute.id("actions-right-list"),

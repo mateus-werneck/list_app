@@ -2731,49 +2731,49 @@ function view(model) {
     toList([
       id("view-lists"),
       class$(
-        "flex flex-row m-auto gap-4 justify-center items-center self-center h-full"
+        "flex flex-col md:flex-row  m-auto gap-4 justify-center items-center self-center h-full"
       )
     ]),
     toList([
       div(
-        toList([id("left-list"), class$("w-96 h-48")]),
+        toList([id("left-list"), class$("w-96 h-full")]),
         toList([
           div(
+            toList([]),
             toList([
-              id("title-left-list"),
-              class$(
-                "flex flex-row gap-4 items-center font-bold p-4 bg-emerald-400"
-              )
-            ]),
-            toList([
-              span(
-                toList([class$("flex-1")]),
-                toList([text("Lista Um")])
+              textarea(
+                toList([
+                  id("elements-left-list"),
+                  class$(
+                    "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200"
+                  ),
+                  on_input(
+                    (var0) => {
+                      return new UserLeftListTyping(var0);
+                    }
+                  )
+                ]),
+                left_text
               ),
               span(
                 toList([
-                  id("counter-left-list"),
-                  class$(
-                    "bg-emerald-800 text-white text-lg p-2 rounded-md"
-                  )
+                  id("left-list-counter"),
+                  (() => {
+                    let $ = left_count === "0";
+                    if ($) {
+                      return class$(
+                        "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
+                      );
+                    } else {
+                      return class$(
+                        "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
+                      );
+                    }
+                  })()
                 ]),
                 toList([text(left_count)])
               )
             ])
-          ),
-          textarea(
-            toList([
-              id("elements-left-list"),
-              class$(
-                "w-full h-full p-2 outline-none bg-white border-l-2 border-r-2 border-slate-200"
-              ),
-              on_input(
-                (var0) => {
-                  return new UserLeftListTyping(var0);
-                }
-              )
-            ]),
-            left_text
           ),
           div(
             toList([
@@ -2803,7 +2803,7 @@ function view(model) {
         ])
       ),
       div(
-        toList([class$("flex flex-col h-48")]),
+        toList([class$("flex flex-col h-1/2")]),
         toList([
           div(toList([class$("flex-1")]), toList([])),
           button(
@@ -2826,44 +2826,44 @@ function view(model) {
         ])
       ),
       div(
-        toList([id("right-list"), class$("w-96 h-48")]),
+        toList([id("right-list")]),
         toList([
           div(
+            toList([]),
             toList([
-              id("title-right-list"),
-              class$(
-                "flex flex-row gap-4 items-center font-bold p-4 bg-emerald-400"
-              )
-            ]),
-            toList([
-              span(
-                toList([class$("flex-1")]),
-                toList([text("Lista Dois")])
+              textarea(
+                toList([
+                  id("elements-right-list"),
+                  class$(
+                    "w-96 h-48 p-2 outline-none bg-white border-2 border-slate-200"
+                  ),
+                  on_input(
+                    (var0) => {
+                      return new UserRightListTyping(var0);
+                    }
+                  )
+                ]),
+                right_text
               ),
               span(
                 toList([
-                  id("counter-right-list"),
-                  class$(
-                    "bg-emerald-800 text-white text-lg p-2 rounded-md"
-                  )
+                  id("right-list-counter"),
+                  (() => {
+                    let $ = left_count === "0";
+                    if ($) {
+                      return class$(
+                        "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
+                      );
+                    } else {
+                      return class$(
+                        "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
+                      );
+                    }
+                  })()
                 ]),
                 toList([text(right_count)])
               )
             ])
-          ),
-          textarea(
-            toList([
-              id("elements-right-list"),
-              class$(
-                "w-full h-full p-2 outline-none bg-white border-l-2 border-r-2 border-slate-200"
-              ),
-              on_input(
-                (var0) => {
-                  return new UserRightListTyping(var0);
-                }
-              )
-            ]),
-            right_text
           ),
           div(
             toList([
@@ -2902,7 +2902,7 @@ function main() {
     throw makeError(
       "let_assert",
       "list_manager",
-      189,
+      185,
       "main",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
