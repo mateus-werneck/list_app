@@ -10,32 +10,72 @@ pub type Model {
 }
 
 pub type Msg {
-  UserLeftListTyping(String)
-  UserRightListTyping(String)
   UserSwitchListContents
+
+  UserLeftListTyping(String)
+  UserTrimLeftListSpaces
+  UserSortLeftList
+  UserCopyLeftList
+  UserDeletedLeftList
+
+  UserRightListTyping(String)
   UserTrimRightListSpaces
-  UserSortAscRightList
+  UserSortRightList
   UserCopyRightList
   UserDeletedRightList
 }
 
+pub fn init(_flags) -> Model {
+  Model([], [])
+}
+
 pub fn update(model: Model, msg: Msg) -> Model {
   case msg {
-    UserLeftListTyping(value) ->
-      Model(..model, left_list: lines.text_to_lines(value))
-    UserRightListTyping(value) ->
-      Model(..model, right_list: lines.text_to_lines(value))
-
     UserSwitchListContents ->
       Model(left_list: model.right_list, right_list: model.left_list)
+    UserLeftListTyping(value) ->
+      Model(..model, left_list: lines.text_to_lines(value))
+    UserTrimLeftListSpaces ->
+      Model(
+        ..model,
+        left_list: list.filter(model.left_list, fn(x) { x != "" && x != "\n" }),
+      )
+    UserSortLeftList ->
+      Model(..model, left_list: list.sort(model.left_list, string.compare))
+    UserCopyLeftList -> {
+      promise.await(
+        clipboard.write_text(string.join(model.left_list, with: "")),
+        fn(result) {
+          case result {
+            Ok(_) ->
+              promise.new(fn(_) {
+                window.alert("Copiado para área de transferência.")
+                Nil
+              })
+            Error(_) -> {
+              promise.new(fn(_) {
+                window.alert(
+                  "Falha ao copiar lista para área de transferência",
+                )
+                Nil
+              })
+            }
+          }
+        },
+      )
+      model
+    }
+    UserDeletedLeftList -> Model(..model, left_list: [])
 
+    UserRightListTyping(value) ->
+      Model(..model, right_list: lines.text_to_lines(value))
     UserTrimRightListSpaces ->
       Model(
         ..model,
-        right_list: list.filter(model.right_list, fn(x) { x != "" && x != "\n" }),
+        right_list: list.filter(model.left_list, fn(x) { x != "" && x != "\n" }),
       )
-    UserSortAscRightList ->
-      Model(..model, right_list: list.sort(model.right_list, string.compare))
+    UserSortRightList ->
+      Model(..model, right_list: list.sort(model.left_list, string.compare))
     UserCopyRightList -> {
       promise.await(
         clipboard.write_text(string.join(model.right_list, with: "")),
