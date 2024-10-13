@@ -1,79 +1,24 @@
 import gleam/int
-import gleam/javascript/promise
-import gleam/list
 import gleam/string
 import lustre
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/event
-import plinth/browser/clipboard
-import plinth/browser/window
+import state
 import string/lines
 
-pub type Model {
-  Model(left_list: List(String), right_list: List(String))
+fn init(_flags) -> state.Model {
+  state.Model([], [])
 }
 
-pub type Msg {
-  UserLeftListTyping(String)
-  UserRightListTyping(String)
-  UserSwitchListContents
-  UserTrimRightListSpaces
-  UserSortAscRightList
-  UserCopyRightList
-  UserDeletedRightList
+pub fn main() {
+  let app = lustre.simple(init, state.update, view)
+  let assert Ok(_) = lustre.start(app, "#app", Nil)
+  Nil
 }
 
-pub fn update(model: Model, msg: Msg) -> Model {
-  case msg {
-    UserLeftListTyping(value) ->
-      Model(..model, left_list: lines.text_to_lines(value))
-    UserRightListTyping(value) ->
-      Model(..model, right_list: lines.text_to_lines(value))
-
-    UserSwitchListContents ->
-      Model(left_list: model.right_list, right_list: model.left_list)
-
-    UserTrimRightListSpaces ->
-      Model(
-        ..model,
-        right_list: list.filter(model.right_list, fn(x) { x != "" && x != "\n" }),
-      )
-    UserSortAscRightList ->
-      Model(..model, right_list: list.sort(model.right_list, string.compare))
-    UserCopyRightList -> {
-      promise.await(
-        clipboard.write_text(string.join(model.right_list, with: "")),
-        fn(result) {
-          case result {
-            Ok(_) ->
-              promise.new(fn(_) {
-                window.alert("Copiado para área de transferência.")
-                Nil
-              })
-            Error(_) -> {
-              promise.new(fn(_) {
-                window.alert(
-                  "Falha ao copiar lista para área de transferência",
-                )
-                Nil
-              })
-            }
-          }
-        },
-      )
-      model
-    }
-    UserDeletedRightList -> Model(..model, right_list: [])
-  }
-}
-
-fn init(_flags) -> Model {
-  Model([], [])
-}
-
-pub fn view(model: Model) -> element.Element(Msg) {
+pub fn view(model: state.Model) -> element.Element(state.Msg) {
   let left_text = string.join(model.left_list, with: "")
   let left_count =
     lines.count_text_lines(model.left_list)
@@ -106,7 +51,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
                   attribute.class(
                     "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200",
                   ),
-                  event.on_input(UserLeftListTyping),
+                  event.on_input(state.UserLeftListTyping),
                 ],
                 left_text,
               ),
@@ -159,7 +104,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
                 attribute.class(
                   "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out",
                 ),
-                event.on_click(UserSwitchListContents),
+                event.on_click(state.UserSwitchListContents),
               ],
               [
                 html.img([
@@ -177,7 +122,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
                   attribute.class(
                     "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200",
                   ),
-                  event.on_input(UserRightListTyping),
+                  event.on_input(state.UserRightListTyping),
                 ],
                 right_text,
               ),
@@ -213,7 +158,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
                     attribute.class(
                       "items-center self-center hover:filter hover:invert transition delay-100 duration-300",
                     ),
-                    event.on_click(UserTrimRightListSpaces),
+                    event.on_click(state.UserTrimRightListSpaces),
                   ],
                   [
                     html.img([
@@ -229,7 +174,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
                     attribute.class(
                       "items-center self-center hover:filter hover:invert transition delay-100 duration-300",
                     ),
-                    event.on_click(UserSortAscRightList),
+                    event.on_click(state.UserSortAscRightList),
                   ],
                   [
                     html.img([
@@ -245,7 +190,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
                     attribute.class(
                       "items-center self-center hover:filter hover:invert transition delay-100 duration-300",
                     ),
-                    event.on_click(UserCopyRightList),
+                    event.on_click(state.UserCopyRightList),
                   ],
                   [
                     html.img([
@@ -261,7 +206,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
                     attribute.class(
                       "items-center self-center hover:filter hover:invert transition delay-100 duration-300",
                     ),
-                    event.on_click(UserDeletedRightList),
+                    event.on_click(state.UserDeletedRightList),
                   ],
                   [
                     html.img([
@@ -286,10 +231,4 @@ pub fn view(model: Model) -> element.Element(Msg) {
       ),
     ],
   )
-}
-
-pub fn main() {
-  let app = lustre.simple(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", Nil)
-  Nil
 }
