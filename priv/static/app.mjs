@@ -130,12 +130,12 @@ function byteArrayToInt(byteArray, start3, end, isBigEndian, isSigned) {
   return value2;
 }
 function byteArrayToFloat(byteArray, start3, end, isBigEndian) {
-  const view4 = new DataView(byteArray.buffer);
+  const view3 = new DataView(byteArray.buffer);
   const byteSize = end - start3;
   if (byteSize === 8) {
-    return view4.getFloat64(start3, !isBigEndian);
+    return view3.getFloat64(start3, !isBigEndian);
   } else if (byteSize === 4) {
-    return view4.getFloat32(start3, !isBigEndian);
+    return view3.getFloat32(start3, !isBigEndian);
   } else {
     const msg = `Sized floats must be 32-bit or 64-bit on JavaScript, got size of ${byteSize * 8} bits`;
     throw new globalThis.Error(msg);
@@ -1100,17 +1100,17 @@ function decode_string(data) {
 function decode_int(data) {
   return Number.isInteger(data) ? new Ok(data) : decoder_error("Int", data);
 }
-function decode_field(value2, name) {
+function decode_field(value2, name2) {
   const not_a_map_error = () => decoder_error("Dict", value2);
   if (value2 instanceof Dict || value2 instanceof WeakMap || value2 instanceof Map) {
-    const entry = map_get(value2, name);
+    const entry = map_get(value2, name2);
     return new Ok(entry.isOk() ? new Some(entry[0]) : new None());
   } else if (value2 === null) {
     return not_a_map_error();
   } else if (Object.getPrototypeOf(value2) == Object.prototype) {
-    return try_get_field(value2, name, () => new Ok(new None()));
+    return try_get_field(value2, name2, () => new Ok(new None()));
   } else {
-    return try_get_field(value2, name, not_a_map_error);
+    return try_get_field(value2, name2, not_a_map_error);
   }
 }
 function try_get_field(value2, field2, or_else) {
@@ -1127,6 +1127,23 @@ function new$() {
 }
 function insert(dict, key2, value2) {
   return map_insert(key2, value2, dict);
+}
+function fold_list_of_pair(loop$list, loop$initial) {
+  while (true) {
+    let list = loop$list;
+    let initial = loop$initial;
+    if (list.hasLength(0)) {
+      return initial;
+    } else {
+      let x = list.head;
+      let rest = list.tail;
+      loop$list = rest;
+      loop$initial = insert(initial, x[0], x[1]);
+    }
+  }
+}
+function from_list(list) {
+  return fold_list_of_pair(list, new$());
 }
 function reverse_and_concat(loop$remaining, loop$accumulator) {
   while (true) {
@@ -2015,8 +2032,8 @@ function any(decoders) {
     }
   };
 }
-function push_path(error, name) {
-  let name$1 = identity(name);
+function push_path(error, name2) {
+  let name$1 = identity(name2);
   let decoder = any(
     toList([string2, (x) => {
       return map2(int(x), to_string2);
@@ -2046,11 +2063,11 @@ function map_errors(result, f) {
 function string2(data) {
   return decode_string(data);
 }
-function field(name, inner_type) {
+function field(name2, inner_type) {
   return (value2) => {
     let missing_field_error = new DecodeError("field", "nothing", toList([]));
     return try$(
-      decode_field(value2, name),
+      decode_field(value2, name2),
       (maybe_inner) => {
         let _pipe = maybe_inner;
         let _pipe$1 = to_result(_pipe, toList([missing_field_error]));
@@ -2058,7 +2075,7 @@ function field(name, inner_type) {
         return map_errors(
           _pipe$2,
           (_capture) => {
-            return push_path(_capture, name);
+            return push_path(_capture, name2);
           }
         );
       }
@@ -2130,9 +2147,9 @@ function attribute_to_event_handler(attribute2) {
   if (attribute2 instanceof Attribute) {
     return new Error(void 0);
   } else {
-    let name = attribute2[0];
+    let name2 = attribute2[0];
     let handler = attribute2[1];
-    let name$1 = drop_left(name, 2);
+    let name$1 = drop_left(name2, 2);
     return new Ok([name$1, handler]);
   }
 }
@@ -2167,9 +2184,9 @@ function do_handlers(loop$element, loop$handlers, loop$key) {
         (handlers3, attr) => {
           let $ = attribute_to_event_handler(attr);
           if ($.isOk()) {
-            let name = $[0][0];
+            let name2 = $[0][0];
             let handler = $[0][1];
-            return insert(handlers3, key2 + "-" + name, handler);
+            return insert(handlers3, key2 + "-" + name2, handler);
           } else {
             return handlers3;
           }
@@ -2187,20 +2204,23 @@ function handlers(element2) {
 }
 
 // build/dev/javascript/lustre/lustre/attribute.mjs
-function attribute(name, value2) {
-  return new Attribute(name, identity(value2), false);
+function attribute(name2, value2) {
+  return new Attribute(name2, identity(value2), false);
 }
-function on(name, handler) {
-  return new Event2("on" + name, handler);
+function on(name2, handler) {
+  return new Event2("on" + name2, handler);
 }
-function class$(name) {
-  return attribute("class", name);
+function class$(name2) {
+  return attribute("class", name2);
 }
-function id(name) {
-  return attribute("id", name);
+function id(name2) {
+  return attribute("id", name2);
 }
-function title(name) {
-  return attribute("title", name);
+function title(name2) {
+  return attribute("title", name2);
+}
+function name(name2) {
+  return attribute("name", name2);
 }
 function src(uri) {
   return attribute("src", uri);
@@ -2413,15 +2433,15 @@ function createElementNode({ prev, next, dispatch, stack }) {
   }
   const delegated = [];
   for (const attr of next.attrs) {
-    const name = attr[0];
+    const name2 = attr[0];
     const value2 = attr[1];
     if (attr.as_property) {
-      if (el[name] !== value2)
-        el[name] = value2;
+      if (el[name2] !== value2)
+        el[name2] = value2;
       if (canMorph)
-        prevAttributes.delete(name);
-    } else if (name.startsWith("on")) {
-      const eventName = name.slice(2);
+        prevAttributes.delete(name2);
+    } else if (name2.startsWith("on")) {
+      const eventName = name2.slice(2);
       const callback = dispatch(value2, eventName === "input");
       if (!handlersForEl.has(eventName)) {
         el.addEventListener(eventName, lustreGenericEventHandler);
@@ -2429,30 +2449,30 @@ function createElementNode({ prev, next, dispatch, stack }) {
       handlersForEl.set(eventName, callback);
       if (canMorph)
         prevHandlers.delete(eventName);
-    } else if (name.startsWith("data-lustre-on-")) {
-      const eventName = name.slice(15);
+    } else if (name2.startsWith("data-lustre-on-")) {
+      const eventName = name2.slice(15);
       const callback = dispatch(lustreServerEventHandler);
       if (!handlersForEl.has(eventName)) {
         el.addEventListener(eventName, lustreGenericEventHandler);
       }
       handlersForEl.set(eventName, callback);
-      el.setAttribute(name, value2);
-    } else if (name.startsWith("delegate:data-") || name.startsWith("delegate:aria-")) {
-      el.setAttribute(name, value2);
-      delegated.push([name.slice(10), value2]);
-    } else if (name === "class") {
+      el.setAttribute(name2, value2);
+    } else if (name2.startsWith("delegate:data-") || name2.startsWith("delegate:aria-")) {
+      el.setAttribute(name2, value2);
+      delegated.push([name2.slice(10), value2]);
+    } else if (name2 === "class") {
       className = className === null ? value2 : className + " " + value2;
-    } else if (name === "style") {
+    } else if (name2 === "style") {
       style = style === null ? value2 : style + value2;
-    } else if (name === "dangerous-unescaped-html") {
+    } else if (name2 === "dangerous-unescaped-html") {
       innerHTML = value2;
     } else {
-      if (el.getAttribute(name) !== value2)
-        el.setAttribute(name, value2);
-      if (name === "value" || name === "selected")
-        el[name] = value2;
+      if (el.getAttribute(name2) !== value2)
+        el.setAttribute(name2, value2);
+      if (name2 === "value" || name2 === "selected")
+        el[name2] = value2;
       if (canMorph)
-        prevAttributes.delete(name);
+        prevAttributes.delete(name2);
     }
   }
   if (className !== null) {
@@ -2477,9 +2497,9 @@ function createElementNode({ prev, next, dispatch, stack }) {
   if (next.tag === "slot") {
     window.queueMicrotask(() => {
       for (const child of el.assignedElements()) {
-        for (const [name, value2] of delegated) {
-          if (!child.hasAttribute(name)) {
-            child.setAttribute(name, value2);
+        for (const [name2, value2] of delegated) {
+          if (!child.hasAttribute(name2)) {
+            child.setAttribute(name2, value2);
           }
         }
       }
@@ -2650,13 +2670,13 @@ var LustreClientApplication = class _LustreClientApplication {
    *
    * @returns {Gleam.Ok<(action: Lustre.Action<Lustre.Client, Msg>>) => void>}
    */
-  static start({ init: init3, update: update2, view: view4 }, selector, flags) {
+  static start({ init: init4, update: update3, view: view3 }, selector, flags) {
     if (!is_browser())
       return new Error(new NotABrowser());
     const root = selector instanceof HTMLElement ? selector : document.querySelector(selector);
     if (!root)
       return new Error(new ElementNotFound(selector));
-    const app = new _LustreClientApplication(root, init3(flags), update2, view4);
+    const app = new _LustreClientApplication(root, init4(flags), update3, view3);
     return new Ok((action) => app.send(action));
   }
   /**
@@ -2667,11 +2687,11 @@ var LustreClientApplication = class _LustreClientApplication {
    *
    * @returns {LustreClientApplication}
    */
-  constructor(root, [init3, effects], update2, view4) {
+  constructor(root, [init4, effects], update3, view3) {
     this.root = root;
-    this.#model = init3;
-    this.#update = update2;
-    this.#view = view4;
+    this.#model = init4;
+    this.#update = update3;
+    this.#view = view3;
     this.#tickScheduled = window.requestAnimationFrame(
       () => this.#tick(effects.all.toArray(), true)
     );
@@ -2788,21 +2808,252 @@ var LustreClientApplication = class _LustreClientApplication {
   }
 };
 var start = LustreClientApplication.start;
+var make_lustre_client_component = ({ init: init4, update: update3, view: view3, on_attribute_change }, name2) => {
+  if (!is_browser())
+    return new Error(new NotABrowser());
+  if (!name2.includes("-"))
+    return new Error(new BadComponentName(name2));
+  if (window.customElements.get(name2)) {
+    return new Error(new ComponentAlreadyRegistered(name2));
+  }
+  const [model, effects] = init4(void 0);
+  const hasAttributes = on_attribute_change instanceof Some;
+  const component2 = class LustreClientComponent extends HTMLElement {
+    /**
+     * @returns {string[]}
+     */
+    static get observedAttributes() {
+      if (hasAttributes) {
+        return on_attribute_change[0].entries().map(([name3]) => name3);
+      } else {
+        return [];
+      }
+    }
+    /**
+     * @returns {LustreClientComponent}
+     */
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      if (hasAttributes) {
+        on_attribute_change[0].forEach((decoder, name3) => {
+          Object.defineProperty(this, name3, {
+            get() {
+              return this[`__mirrored__${name3}`];
+            },
+            set(value2) {
+              const prev = this[`__mirrored__${name3}`];
+              if (this.#connected && isEqual(prev, value2))
+                return;
+              this[`__mirrorred__${name3}`] = value2;
+              const decoded = decoder(value2);
+              if (decoded instanceof Error)
+                return;
+              this.#queue.push(decoded[0]);
+              if (this.#connected && !this.#tickScheduled) {
+                this.#tickScheduled = window.requestAnimationFrame(
+                  () => this.#tick()
+                );
+              }
+            }
+          });
+        });
+      }
+    }
+    /**
+     *
+     */
+    connectedCallback() {
+      this.#adoptStyleSheets().finally(() => {
+        this.#tick(effects.all.toArray(), true);
+        this.#connected = true;
+      });
+    }
+    /**
+     * @param {string} key
+     * @param {string} prev
+     * @param {string} next
+     */
+    attributeChangedCallback(key2, prev, next) {
+      if (prev !== next)
+        this[key2] = next;
+    }
+    /**
+     *
+     */
+    disconnectedCallback() {
+      this.#model = null;
+      this.#queue = [];
+      this.#tickScheduled = window.cancelAnimationFrame(this.#tickScheduled);
+      this.#connected = false;
+    }
+    /**
+     * @param {Lustre.Action<Msg, Lustre.ClientSpa>} action
+     */
+    send(action) {
+      if (action instanceof Debug) {
+        if (action[0] instanceof ForceModel) {
+          this.#tickScheduled = window.cancelAnimationFrame(
+            this.#tickScheduled
+          );
+          this.#queue = [];
+          this.#model = action[0][0];
+          const vdom = view3(this.#model);
+          const dispatch = (handler, immediate = false) => (event2) => {
+            const result = handler(event2);
+            if (result instanceof Ok) {
+              this.send(new Dispatch(result[0], immediate));
+            }
+          };
+          const prev = this.shadowRoot.childNodes[this.#adoptedStyleElements.length] ?? this.shadowRoot.appendChild(document.createTextNode(""));
+          morph(prev, vdom, dispatch);
+        }
+      } else if (action instanceof Dispatch) {
+        const msg = action[0];
+        const immediate = action[1] ?? false;
+        this.#queue.push(msg);
+        if (immediate) {
+          this.#tickScheduled = window.cancelAnimationFrame(
+            this.#tickScheduled
+          );
+          this.#tick();
+        } else if (!this.#tickScheduled) {
+          this.#tickScheduled = window.requestAnimationFrame(
+            () => this.#tick()
+          );
+        }
+      } else if (action instanceof Emit2) {
+        const event2 = action[0];
+        const data = action[1];
+        this.dispatchEvent(
+          new CustomEvent(event2, {
+            detail: data,
+            bubbles: true,
+            composed: true
+          })
+        );
+      }
+    }
+    /** @type {Element[]} */
+    #adoptedStyleElements = [];
+    /** @type {Model} */
+    #model = model;
+    /** @type {Array<Msg>} */
+    #queue = [];
+    /** @type {number | undefined} */
+    #tickScheduled;
+    /** @type {boolean} */
+    #connected = true;
+    #tick(effects2 = [], isFirstRender = false) {
+      this.#tickScheduled = void 0;
+      if (!this.#connected)
+        return;
+      if (!this.#flush(isFirstRender, effects2))
+        return;
+      const vdom = view3(this.#model);
+      const dispatch = (handler, immediate = false) => (event2) => {
+        const result = handler(event2);
+        if (result instanceof Ok) {
+          this.send(new Dispatch(result[0], immediate));
+        }
+      };
+      const prev = this.shadowRoot.childNodes[this.#adoptedStyleElements.length] ?? this.shadowRoot.appendChild(document.createTextNode(""));
+      morph(prev, vdom, dispatch);
+    }
+    #flush(didUpdate = false, effects2 = []) {
+      while (this.#queue.length > 0) {
+        const msg = this.#queue.shift();
+        const [next, effect] = update3(this.#model, msg);
+        didUpdate ||= this.#model !== next;
+        effects2 = effects2.concat(effect.all.toArray());
+        this.#model = next;
+      }
+      while (effects2.length > 0) {
+        const effect = effects2.shift();
+        const dispatch = (msg) => this.send(new Dispatch(msg));
+        const emit2 = (event2, data) => this.dispatchEvent(
+          new CustomEvent(event2, {
+            detail: data,
+            bubbles: true,
+            composed: true
+          })
+        );
+        const select = () => {
+        };
+        effect({ dispatch, emit: emit2, select });
+      }
+      if (this.#queue.length > 0) {
+        return this.#flush(didUpdate, effects2);
+      } else {
+        return didUpdate;
+      }
+    }
+    async #adoptStyleSheets() {
+      const pendingParentStylesheets = [];
+      for (const link of document.querySelectorAll("link[rel=stylesheet]")) {
+        if (link.sheet)
+          continue;
+        pendingParentStylesheets.push(
+          new Promise((resolve2, reject) => {
+            link.addEventListener("load", resolve2);
+            link.addEventListener("error", reject);
+          })
+        );
+      }
+      await Promise.allSettled(pendingParentStylesheets);
+      while (this.#adoptedStyleElements.length) {
+        this.#adoptedStyleElements.shift().remove();
+        this.shadowRoot.firstChild.remove();
+      }
+      this.shadowRoot.adoptedStyleSheets = this.getRootNode().adoptedStyleSheets;
+      const pending = [];
+      for (const sheet of document.styleSheets) {
+        try {
+          this.shadowRoot.adoptedStyleSheets.push(sheet);
+        } catch {
+          try {
+            const adoptedSheet = new CSSStyleSheet();
+            for (const rule of sheet.cssRules) {
+              adoptedSheet.insertRule(
+                rule.cssText,
+                adoptedSheet.cssRules.length
+              );
+            }
+            this.shadowRoot.adoptedStyleSheets.push(adoptedSheet);
+          } catch {
+            const node = sheet.ownerNode.cloneNode();
+            this.shadowRoot.prepend(node);
+            this.#adoptedStyleElements.push(node);
+            pending.push(
+              new Promise((resolve2, reject) => {
+                node.onload = resolve2;
+                node.onerror = reject;
+              })
+            );
+          }
+        }
+      }
+      return Promise.allSettled(pending);
+    }
+  };
+  window.customElements.define(name2, component2);
+  return new Ok(void 0);
+};
 var LustreServerApplication = class _LustreServerApplication {
-  static start({ init: init3, update: update2, view: view4, on_attribute_change }, flags) {
+  static start({ init: init4, update: update3, view: view3, on_attribute_change }, flags) {
     const app = new _LustreServerApplication(
-      init3(flags),
-      update2,
-      view4,
+      init4(flags),
+      update3,
+      view3,
       on_attribute_change
     );
     return new Ok((action) => app.send(action));
   }
-  constructor([model, effects], update2, view4, on_attribute_change) {
+  constructor([model, effects], update3, view3, on_attribute_change) {
     this.#model = model;
-    this.#update = update2;
-    this.#view = view4;
-    this.#html = view4(model);
+    this.#update = update3;
+    this.#view = view3;
+    this.#html = view3(model);
     this.#onAttributeChange = on_attribute_change;
     this.#renderers = /* @__PURE__ */ new Map();
     this.#handlers = handlers(this.#html);
@@ -2906,12 +3157,24 @@ var is_browser = () => globalThis.window && window.document;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init3, update2, view4, on_attribute_change) {
+  constructor(init4, update3, view3, on_attribute_change) {
     super();
-    this.init = init3;
-    this.update = update2;
-    this.view = view4;
+    this.init = init4;
+    this.update = update3;
+    this.view = view3;
     this.on_attribute_change = on_attribute_change;
+  }
+};
+var BadComponentName = class extends CustomType {
+  constructor(name2) {
+    super();
+    this.name = name2;
+  }
+};
+var ComponentAlreadyRegistered = class extends CustomType {
+  constructor(name2) {
+    super();
+    this.name = name2;
   }
 };
 var ElementNotFound = class extends CustomType {
@@ -2922,17 +3185,20 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function application(init3, update2, view4) {
-  return new App(init3, update2, view4, new None());
+function application(init4, update3, view3) {
+  return new App(init4, update3, view3, new None());
 }
-function simple(init3, update2, view4) {
+function simple(init4, update3, view3) {
   let init$1 = (flags) => {
-    return [init3(flags), none()];
+    return [init4(flags), none()];
   };
   let update$1 = (model, msg) => {
-    return [update2(model, msg), none()];
+    return [update3(model, msg), none()];
   };
-  return application(init$1, update$1, view4);
+  return application(init$1, update$1, view3);
+}
+function component(init4, update3, view3, on_attribute_change) {
+  return new App(init4, update3, view3, new Some(on_attribute_change));
 }
 function start2(app, selector, flags) {
   return guard(
@@ -2962,8 +3228,8 @@ function textarea(attrs, content) {
 }
 
 // build/dev/javascript/lustre/lustre/event.mjs
-function on2(name, handler) {
-  return on(name, handler);
+function on2(name2, handler) {
+  return on(name2, handler);
 }
 function on_click(msg) {
   return on2("click", (_) => {
@@ -3189,8 +3455,225 @@ function count_text_lines(value2) {
   return length(_pipe$1);
 }
 
-// build/dev/javascript/app/state.mjs
+// build/dev/javascript/app/components/list_view.mjs
 var Model2 = class extends CustomType {
+  constructor(name2, text_lines) {
+    super();
+    this.name = name2;
+    this.text_lines = text_lines;
+  }
+};
+var InitListNameAttribute = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserListTyping = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserTrimListSpaces = class extends CustomType {
+};
+var UserSortList = class extends CustomType {
+};
+var UserCopyList = class extends CustomType {
+};
+var UserDeletedList = class extends CustomType {
+};
+function init2(_) {
+  return [new Model2("list", toList([])), none()];
+}
+function update(model, msg) {
+  if (msg instanceof InitListNameAttribute) {
+    let name2 = msg[0];
+    return [model.withFields({ name: name2 }), none()];
+  } else if (msg instanceof UserListTyping) {
+    let value2 = msg[0];
+    return [
+      model.withFields({ text_lines: text_to_lines(value2) }),
+      none()
+    ];
+  } else if (msg instanceof UserTrimListSpaces) {
+    return [
+      model.withFields({
+        text_lines: filter(
+          model.text_lines,
+          (x) => {
+            return x !== "" && x !== "\n";
+          }
+        )
+      }),
+      none()
+    ];
+  } else if (msg instanceof UserSortList) {
+    return [
+      model.withFields({
+        text_lines: sort(model.text_lines, compare3)
+      }),
+      none()
+    ];
+  } else if (msg instanceof UserCopyList) {
+    then_await(
+      writeText(join2(model.text_lines, "")),
+      (result) => {
+        if (result.isOk()) {
+          return newPromise(
+            (_) => {
+              alert("Copiado para \xE1rea de transfer\xEAncia.");
+              return void 0;
+            }
+          );
+        } else {
+          return newPromise(
+            (_) => {
+              alert(
+                "Falha ao copiar lista para \xE1rea de transfer\xEAncia"
+              );
+              return void 0;
+            }
+          );
+        }
+      }
+    );
+    return [model, none()];
+  } else {
+    return [model.withFields({ text_lines: toList([]) }), none()];
+  }
+}
+function text_area(name2, content, msg) {
+  return textarea(
+    toList([
+      id(name2),
+      class$(
+        "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200"
+      ),
+      on_input(msg)
+    ]),
+    content
+  );
+}
+function counter(name2, count) {
+  return span(
+    toList([
+      id(name2),
+      (() => {
+        let $ = count === "0";
+        if ($) {
+          return class$(
+            "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
+          );
+        } else {
+          return class$(
+            "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
+          );
+        }
+      })()
+    ]),
+    toList([text(count)])
+  );
+}
+function action_button(name2, title2, img2, msg) {
+  return button(
+    toList([
+      id(name2),
+      title(title2),
+      class$(
+        "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
+      ),
+      on_click(msg)
+    ]),
+    toList([img(toList([src(img2), class$("w-6")]))])
+  );
+}
+function view(model) {
+  let text2 = join2(model.text_lines, "");
+  let count = (() => {
+    let _pipe = count_text_lines(model.text_lines);
+    return to_string2(_pipe);
+  })();
+  return div(
+    toList([id(model.name)]),
+    toList([
+      div(
+        toList([]),
+        toList([
+          text_area(
+            "elements-" + model.name,
+            text2,
+            (var0) => {
+              return new UserListTyping(var0);
+            }
+          ),
+          counter("counter-" + model.name, count)
+        ])
+      ),
+      div(
+        toList([
+          id("actions-" + model.name),
+          class$(
+            "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md"
+          )
+        ]),
+        toList([
+          action_button(
+            "trim-" + model.name,
+            "Remover espa\xE7os em branco",
+            "/priv/static/images/trim.svg",
+            new UserTrimListSpaces()
+          ),
+          action_button(
+            "sort-" + model.name,
+            "Ordernar lista",
+            "/priv/static/images/sort-asc.svg",
+            new UserSortList()
+          ),
+          action_button(
+            "copy-" + model.name,
+            "Copiar para \xE1rea de transfer\xEAncia",
+            "/priv/static/images/copy.svg",
+            new UserCopyList()
+          ),
+          action_button(
+            "delete-" + model.name,
+            "Apagar conte\xFAdo",
+            "/priv/static/images/delete.svg",
+            new UserDeletedList()
+          )
+        ])
+      )
+    ])
+  );
+}
+function list_view_component() {
+  return component(
+    init2,
+    update,
+    view,
+    from_list(
+      toList([
+        [
+          "name",
+          (attr) => {
+            let $ = string2(attr);
+            if ($.isOk()) {
+              let value2 = $[0];
+              return new Ok(new InitListNameAttribute(value2));
+            } else {
+              let e = $[0];
+              return new Error(e);
+            }
+          }
+        ]
+      ])
+    )
+  );
+}
+
+// build/dev/javascript/app/app.mjs
+var Model3 = class extends CustomType {
   constructor(left_list, right_list) {
     super();
     this.left_list = left_list;
@@ -3199,409 +3682,45 @@ var Model2 = class extends CustomType {
 };
 var UserSwitchListContents = class extends CustomType {
 };
-var UserLeftListTyping = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
-var UserTrimLeftListSpaces = class extends CustomType {
-};
-var UserSortLeftList = class extends CustomType {
-};
-var UserCopyLeftList = class extends CustomType {
-};
-var UserDeletedLeftList = class extends CustomType {
-};
-var UserRightListTyping = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
-var UserTrimRightListSpaces = class extends CustomType {
-};
-var UserSortRightList = class extends CustomType {
-};
-var UserCopyRightList = class extends CustomType {
-};
-var UserDeletedRightList = class extends CustomType {
-};
-function init2(_) {
-  return new Model2(toList([]), toList([]));
+function init3(_) {
+  return new Model3(toList([]), toList([]));
 }
-function update(model, msg) {
-  if (msg instanceof UserSwitchListContents) {
-    return new Model2(model.right_list, model.left_list);
-  } else if (msg instanceof UserLeftListTyping) {
-    let value2 = msg[0];
-    return model.withFields({ left_list: text_to_lines(value2) });
-  } else if (msg instanceof UserTrimLeftListSpaces) {
-    return model.withFields({
-      left_list: filter(
-        model.left_list,
-        (x) => {
-          return x !== "" && x !== "\n";
-        }
-      )
-    });
-  } else if (msg instanceof UserSortLeftList) {
-    return model.withFields({
-      left_list: sort(model.left_list, compare3)
-    });
-  } else if (msg instanceof UserCopyLeftList) {
-    then_await(
-      writeText(join2(model.left_list, "")),
-      (result) => {
-        if (result.isOk()) {
-          return newPromise(
-            (_) => {
-              alert("Copiado para \xE1rea de transfer\xEAncia.");
-              return void 0;
-            }
-          );
-        } else {
-          return newPromise(
-            (_) => {
-              alert(
-                "Falha ao copiar lista para \xE1rea de transfer\xEAncia"
-              );
-              return void 0;
-            }
-          );
-        }
-      }
-    );
-    return model;
-  } else if (msg instanceof UserDeletedLeftList) {
-    return model.withFields({ left_list: toList([]) });
-  } else if (msg instanceof UserRightListTyping) {
-    let value2 = msg[0];
-    return model.withFields({ right_list: text_to_lines(value2) });
-  } else if (msg instanceof UserTrimRightListSpaces) {
-    return model.withFields({
-      right_list: filter(
-        model.left_list,
-        (x) => {
-          return x !== "" && x !== "\n";
-        }
-      )
-    });
-  } else if (msg instanceof UserSortRightList) {
-    return model.withFields({
-      right_list: sort(model.left_list, compare3)
-    });
-  } else if (msg instanceof UserCopyRightList) {
-    then_await(
-      writeText(join2(model.right_list, "")),
-      (result) => {
-        if (result.isOk()) {
-          return newPromise(
-            (_) => {
-              alert("Copiado para \xE1rea de transfer\xEAncia.");
-              return void 0;
-            }
-          );
-        } else {
-          return newPromise(
-            (_) => {
-              alert(
-                "Falha ao copiar lista para \xE1rea de transfer\xEAncia"
-              );
-              return void 0;
-            }
-          );
-        }
-      }
-    );
-    return model;
-  } else {
-    return model.withFields({ right_list: toList([]) });
+function update2(model, msg) {
+  {
+    return new Model3(model.right_list, model.left_list);
   }
 }
-
-// build/dev/javascript/app/views/left_list.mjs
-var LeftListProps = class extends CustomType {
-  constructor(name, data) {
-    super();
-    this.name = name;
-    this.data = data;
-  }
-};
-function view(props) {
-  let text2 = join2(props.data, "");
-  let count = (() => {
-    let _pipe = count_text_lines(props.data);
-    return to_string2(_pipe);
-  })();
-  return div(
-    toList([id(props.name)]),
+function switch_button() {
+  return button(
     toList([
-      div(
-        toList([]),
-        toList([
-          textarea(
-            toList([
-              id("elements-" + props.name),
-              class$(
-                "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200"
-              ),
-              on_input(
-                (var0) => {
-                  return new UserLeftListTyping(var0);
-                }
-              )
-            ]),
-            text2
-          ),
-          span(
-            toList([
-              id("counter-" + props.name),
-              (() => {
-                let $ = count === "0";
-                if ($) {
-                  return class$(
-                    "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
-                  );
-                } else {
-                  return class$(
-                    "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
-                  );
-                }
-              })()
-            ]),
-            toList([text(count)])
-          )
-        ])
+      id("switch-list-content"),
+      class$(
+        "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out"
       ),
-      div(
+      on_click(new UserSwitchListContents())
+    ]),
+    toList([
+      img(
         toList([
-          id("actions-" + props.name),
-          class$(
-            "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md"
-          )
-        ]),
-        toList([
-          button(
-            toList([
-              id("trim-" + props.name),
-              title("Remover espa\xE7os em branco"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserTrimLeftListSpaces())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/trim.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          ),
-          button(
-            toList([
-              id("sort-" + props.name),
-              title("Ordernar lista"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserSortLeftList())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/sort-asc.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          ),
-          button(
-            toList([
-              id("copy-" + props.name),
-              title("Copiar para \xE1rea de transfer\xEAncia"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserCopyLeftList())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/copy.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          ),
-          button(
-            toList([
-              id("delete-" + props.name),
-              title("Apagar conte\xFAdo"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserDeletedLeftList())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/delete.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          )
+          src("/priv/static/images/switch.svg"),
+          class$("w-5")
         ])
       )
     ])
   );
 }
-
-// build/dev/javascript/app/views/right_list.mjs
-var RightListProps = class extends CustomType {
-  constructor(name, data) {
-    super();
-    this.name = name;
-    this.data = data;
-  }
-};
-function view2(props) {
-  let text2 = join2(props.data, "");
-  let count = (() => {
-    let _pipe = count_text_lines(props.data);
-    return to_string2(_pipe);
-  })();
-  return div(
-    toList([id(props.name)]),
+function compare_button() {
+  return button(
     toList([
-      div(
-        toList([]),
-        toList([
-          textarea(
-            toList([
-              id("elements-" + props.name),
-              class$(
-                "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200"
-              ),
-              on_input(
-                (var0) => {
-                  return new UserRightListTyping(var0);
-                }
-              )
-            ]),
-            text2
-          ),
-          span(
-            toList([
-              id("counter-" + props.name),
-              (() => {
-                let $ = count === "0";
-                if ($) {
-                  return class$(
-                    "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
-                  );
-                } else {
-                  return class$(
-                    "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
-                  );
-                }
-              })()
-            ]),
-            toList([text(count)])
-          )
-        ])
-      ),
-      div(
-        toList([
-          id("actions-" + props.name),
-          class$(
-            "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md"
-          )
-        ]),
-        toList([
-          button(
-            toList([
-              id("trim-" + props.name),
-              title("Remover espa\xE7os em branco"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserTrimRightListSpaces())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/trim.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          ),
-          button(
-            toList([
-              id("sort-" + props.name),
-              title("Ordernar lista"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserSortRightList())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/sort-asc.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          ),
-          button(
-            toList([
-              id("copy-" + props.name),
-              title("Copiar para \xE1rea de transfer\xEAncia"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserCopyRightList())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/copy.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          ),
-          button(
-            toList([
-              id("delete-" + props.name),
-              title("Apagar conte\xFAdo"),
-              class$(
-                "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-              ),
-              on_click(new UserDeletedRightList())
-            ]),
-            toList([
-              img(
-                toList([
-                  src("/priv/static/images/delete.svg"),
-                  class$("w-6")
-                ])
-              )
-            ])
-          )
-        ])
+      id("compare-button"),
+      class$(
+        "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300"
       )
-    ])
+    ]),
+    toList([text("Comparar")])
   );
 }
-
-// build/dev/javascript/app/app.mjs
-function view3(model) {
+function view2(_) {
   return div(
     toList([
       id("root"),
@@ -3616,60 +3735,45 @@ function view3(model) {
           )
         ]),
         toList([
-          view(
-            new LeftListProps("left-list", model.left_list)
+          element(
+            "list-view",
+            toList([name("left-list")]),
+            toList([])
           ),
-          div(
-            toList([class$("flex flex-col h-1/2")]),
-            toList([
-              div(toList([class$("flex-1")]), toList([])),
-              button(
-                toList([
-                  id("switch-list-content"),
-                  class$(
-                    "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out"
-                  ),
-                  on_click(new UserSwitchListContents())
-                ]),
-                toList([
-                  img(
-                    toList([
-                      src("/priv/static/images/switch.svg"),
-                      class$("w-5")
-                    ])
-                  )
-                ])
-              )
-            ])
-          ),
-          view2(
-            new RightListProps("right-list", model.right_list)
+          switch_button(),
+          element(
+            "list-view",
+            toList([name("right-list")]),
+            toList([])
           )
         ])
       ),
-      button(
-        toList([
-          id("compare-button"),
-          class$(
-            "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300"
-          )
-        ]),
-        toList([text("Comparar")])
-      )
+      compare_button()
     ])
   );
 }
 function main() {
-  let app = simple(init2, update, view3);
-  let $ = start2(app, "#app", void 0);
+  let app = simple(init3, update2, view2);
+  let $ = make_lustre_client_component(list_view_component(), "list-view");
   if (!$.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      12,
+      10,
       "main",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
+    );
+  }
+  let $1 = start2(app, "#app", void 0);
+  if (!$1.isOk()) {
+    throw makeError(
+      "let_assert",
+      "app",
+      13,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $1 }
     );
   }
   return void 0;
