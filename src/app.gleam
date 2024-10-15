@@ -143,58 +143,40 @@ pub fn view(model: Model) -> element.Element(Msg) {
 
   let assert Ok(both_list) = dict.get(model, contain_both)
 
-  html.div(
-    [
-      attribute.id("root"),
-      attribute.class("flex flex-col px-4 py-16  m-auto gap-16 items-center"),
-    ],
-    [
-      html.div(
-        [
-          attribute.id("view-lists"),
-          attribute.class(
-            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center",
-          ),
-        ],
-        [
-          text_area(left, left_list),
-          switch_button(),
-          text_area(right, right_list),
-        ],
-      ),
-      compare_button(),
-      html.div(
-        [
-          attribute.id("view-comparison-lists"),
-          attribute.class(
-            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center",
-          ),
-        ],
-        [
-          text_area(only_left, only_left_list),
-          text_area(only_right, only_right_list),
-        ],
-      ),
-      html.div(
-        [
-          attribute.id("view-both-lists"),
-          attribute.class(
-            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center",
-          ),
-        ],
-        [text_area(contain_both, both_list)],
-      ),
-    ],
-  )
+  let root_style = "flex flex-col px-4 py-16  m-auto gap-16 items-center"
+
+  let view_list_style =
+    "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
+
+  html.div([attribute.id("root"), attribute.class(root_style)], [
+    html.div([attribute.id("view-lists"), attribute.class(view_list_style)], [
+      text_area(left, left_list),
+      switch_button(),
+      text_area(right, right_list),
+    ]),
+    compare_button(),
+    html.div(
+      [attribute.id("view-comparison-lists"), attribute.class(view_list_style)],
+      [
+        text_area(only_left, only_left_list),
+        text_area(only_right, only_right_list),
+      ],
+    ),
+    html.div(
+      [attribute.id("view-both-lists"), attribute.class(view_list_style)],
+      [text_area(contain_both, both_list)],
+    ),
+  ])
 }
 
 fn switch_button() {
+  let style =
+    "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out"
+
   html.button(
     [
       attribute.id("switch-list-content"),
-      attribute.class(
-        "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out",
-      ),
+      attribute.class(style),
       event.on_click(UserSwitchListContents),
     ],
     [
@@ -207,12 +189,14 @@ fn switch_button() {
 }
 
 fn compare_button() {
+  let style =
+    "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent"
+    <> " hover:text-white hover:bg-indigo-600 transition delay-75 duration-300"
+
   html.button(
     [
       attribute.id("compare-button"),
-      attribute.class(
-        "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300",
-      ),
+      attribute.class(style),
       event.on_click(UserCompareListContents),
     ],
     [element.text("Comparar")],
@@ -244,14 +228,19 @@ fn text_area(name: String, content: List(String)) -> element.Element(Msg) {
     lines.count_text_lines(content)
     |> int.to_string
 
+  let text_area_style =
+    "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none"
+    <> " bg-white border-2 border-slate-200"
+
+  let action_buttons_style =
+    "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md"
+
   html.div([attribute.id(name)], [
     html.div([], [
       html.textarea(
         [
           attribute.id(name),
-          attribute.class(
-            "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200",
-          ),
+          attribute.class(text_area_style),
           event.on_input(fn(value) { UserListTyping(name, value) }),
         ],
         text,
@@ -259,12 +248,7 @@ fn text_area(name: String, content: List(String)) -> element.Element(Msg) {
       text_counter("counter-" <> name, count),
     ]),
     html.div(
-      [
-        attribute.id("actions-" <> name),
-        attribute.class(
-          "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md",
-        ),
-      ],
+      [attribute.id("actions-" <> name), attribute.class(action_buttons_style)],
       [
         action_button(
           "trim-" <> name,
@@ -296,18 +280,17 @@ fn text_area(name: String, content: List(String)) -> element.Element(Msg) {
 }
 
 fn text_counter(name: String, count: String) {
+  let zero_counter_style =
+    "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
+  let counter_style =
+    "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
+
   html.span(
     [
       attribute.id(name),
       case count == "0" {
-        True ->
-          attribute.class(
-            "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end",
-          )
-        False ->
-          attribute.class(
-            "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end",
-          )
+        True -> attribute.class(zero_counter_style)
+        False -> attribute.class(counter_style)
       },
     ],
     [element.text(count)],
@@ -315,13 +298,14 @@ fn text_counter(name: String, count: String) {
 }
 
 fn action_button(name: String, title: String, img: String, msg: Msg) {
+  let style =
+    "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
+
   html.button(
     [
       attribute.id(name),
       attribute.title(title),
-      attribute.class(
-        "items-center self-center hover:filter hover:invert transition delay-100 duration-300",
-      ),
+      attribute.class(style),
       event.on_click(msg),
     ],
     [html.img([attribute.src(img), attribute.class("w-6")])],

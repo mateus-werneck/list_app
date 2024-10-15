@@ -3349,12 +3349,11 @@ var UserDeletedList = class extends CustomType {
   }
 };
 function switch_button() {
+  let style = "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out";
   return button(
     toList([
       id("switch-list-content"),
-      class$(
-        "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out"
-      ),
+      class$(style),
       on_click(new UserSwitchListContents())
     ]),
     toList([
@@ -3368,12 +3367,11 @@ function switch_button() {
   );
 }
 function compare_button() {
+  let style = "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300";
   return button(
     toList([
       id("compare-button"),
-      class$(
-        "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300"
-      ),
+      class$(style),
       on_click(new UserCompareListContents())
     ]),
     toList([text("Comparar")])
@@ -3402,19 +3400,17 @@ function clipboard(data) {
   );
 }
 function text_counter(name, count) {
+  let zero_counter_style = "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end";
+  let counter_style = "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end";
   return span(
     toList([
       id(name),
       (() => {
         let $ = count === "0";
         if ($) {
-          return class$(
-            "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
-          );
+          return class$(zero_counter_style);
         } else {
-          return class$(
-            "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
-          );
+          return class$(counter_style);
         }
       })()
     ]),
@@ -3422,13 +3418,12 @@ function text_counter(name, count) {
   );
 }
 function action_button(name, title2, img2, msg) {
+  let style = "items-center self-center hover:filter hover:invert transition delay-100 duration-300";
   return button(
     toList([
       id(name),
       title(title2),
-      class$(
-        "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-      ),
+      class$(style),
       on_click(msg)
     ]),
     toList([img(toList([src(img2), class$("w-6")]))])
@@ -3440,6 +3435,8 @@ function text_area(name, content) {
     let _pipe = count_text_lines(content);
     return to_string2(_pipe);
   })();
+  let text_area_style = "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200";
+  let action_buttons_style = "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md";
   return div(
     toList([id(name)]),
     toList([
@@ -3449,9 +3446,7 @@ function text_area(name, content) {
           textarea(
             toList([
               id(name),
-              class$(
-                "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none bg-white border-2 border-slate-200"
-              ),
+              class$(text_area_style),
               on_input(
                 (value2) => {
                   return new UserListTyping(name, value2);
@@ -3466,9 +3461,7 @@ function text_area(name, content) {
       div(
         toList([
           id("actions-" + name),
-          class$(
-            "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md"
-          )
+          class$(action_buttons_style)
         ]),
         toList([
           action_button(
@@ -3740,19 +3733,13 @@ function view(model) {
     );
   }
   let both_list = $4[0];
+  let root_style = "flex flex-col px-4 py-16  m-auto gap-16 items-center";
+  let view_list_style = "flex flex-col md:flex-row m-auto gap-4 px-4 items-center";
   return div(
-    toList([
-      id("root"),
-      class$("flex flex-col px-4 py-16  m-auto gap-16 items-center")
-    ]),
+    toList([id("root"), class$(root_style)]),
     toList([
       div(
-        toList([
-          id("view-lists"),
-          class$(
-            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
-          )
-        ]),
+        toList([id("view-lists"), class$(view_list_style)]),
         toList([
           text_area(left, left_list),
           switch_button(),
@@ -3763,9 +3750,7 @@ function view(model) {
       div(
         toList([
           id("view-comparison-lists"),
-          class$(
-            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
-          )
+          class$(view_list_style)
         ]),
         toList([
           text_area(only_left, only_left_list),
@@ -3775,9 +3760,7 @@ function view(model) {
       div(
         toList([
           id("view-both-lists"),
-          class$(
-            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
-          )
+          class$(view_list_style)
         ]),
         toList([text_area(contain_both, both_list)])
       )
