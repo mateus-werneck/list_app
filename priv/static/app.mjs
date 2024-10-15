@@ -1416,6 +1416,37 @@ function do_take(loop$list, loop$n, loop$acc) {
 function take(list, n) {
   return do_take(list, n, toList([]));
 }
+function reverse_and_prepend(loop$prefix, loop$suffix) {
+  while (true) {
+    let prefix = loop$prefix;
+    let suffix = loop$suffix;
+    if (prefix.hasLength(0)) {
+      return suffix;
+    } else {
+      let first$1 = prefix.head;
+      let rest$1 = prefix.tail;
+      loop$prefix = rest$1;
+      loop$suffix = prepend(first$1, suffix);
+    }
+  }
+}
+function do_concat(loop$lists, loop$acc) {
+  while (true) {
+    let lists = loop$lists;
+    let acc = loop$acc;
+    if (lists.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let list = lists.head;
+      let further_lists = lists.tail;
+      loop$lists = further_lists;
+      loop$acc = reverse_and_prepend(list, acc);
+    }
+  }
+}
+function concat2(lists) {
+  return do_concat(lists, toList([]));
+}
 function fold(loop$list, loop$initial, loop$fun) {
   while (true) {
     let list = loop$list;
@@ -1452,6 +1483,20 @@ function do_index_fold(loop$over, loop$acc, loop$with, loop$index) {
 }
 function index_fold(over, initial, fun) {
   return do_index_fold(over, initial, fun, 0);
+}
+function unique(list) {
+  if (list.hasLength(0)) {
+    return toList([]);
+  } else {
+    let x = list.head;
+    let rest$1 = list.tail;
+    return prepend(
+      x,
+      unique(filter(rest$1, (y) => {
+        return !isEqual(y, x);
+      }))
+    );
+  }
 }
 function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$prev, loop$acc) {
   while (true) {
@@ -2006,7 +2051,7 @@ function compare3(a, b) {
     }
   }
 }
-function concat2(strings) {
+function concat3(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
   return to_string3(_pipe$1);
@@ -2019,7 +2064,7 @@ function do_slice(string4, idx, len) {
   let _pipe$1 = graphemes(_pipe);
   let _pipe$2 = drop(_pipe$1, idx);
   let _pipe$3 = take(_pipe$2, len);
-  return concat2(_pipe$3);
+  return concat3(_pipe$3);
 }
 function slice(string4, idx, len) {
   let $ = len < 0;
@@ -3459,6 +3504,18 @@ var left = "left-list";
 var right = "right-list";
 var only_left = "only-left-list";
 var only_right = "only-right-list";
+var contain_both = "contain-both-list";
+function init2(_) {
+  return from_list(
+    toList([
+      [left, toList([])],
+      [right, toList([])],
+      [only_left, toList([])],
+      [only_right, toList([])],
+      [contain_both, toList([])]
+    ])
+  );
+}
 function update(model, msg) {
   if (msg instanceof UserSwitchListContents) {
     let $ = get(model, left);
@@ -3509,13 +3566,16 @@ function update(model, msg) {
       );
     }
     let only_right_list = $3[0];
-    return from_list(
-      toList([
-        [left, right_list],
-        [right, left_list],
-        [only_left, only_right_list],
-        [only_right, only_left_list]
-      ])
+    return merge(
+      model,
+      from_list(
+        toList([
+          [left, right_list],
+          [right, left_list],
+          [only_left, only_right_list],
+          [only_right, only_left_list]
+        ])
+      )
     );
   } else if (msg instanceof UserCompareListContents) {
     let $ = get(model, left);
@@ -3523,7 +3583,7 @@ function update(model, msg) {
       throw makeError(
         "let_assert",
         "app",
-        74,
+        77,
         "update",
         "Pattern match failed, no pattern matched the value.",
         { value: $ }
@@ -3535,7 +3595,7 @@ function update(model, msg) {
       throw makeError(
         "let_assert",
         "app",
-        75,
+        78,
         "update",
         "Pattern match failed, no pattern matched the value.",
         { value: $1 }
@@ -3554,12 +3614,26 @@ function update(model, msg) {
         return !contains(left_list, x);
       }
     );
+    let both_list = (() => {
+      let _pipe = concat2(toList([left_list, right_list]));
+      let _pipe$1 = filter(
+        _pipe,
+        (x) => {
+          return !contains(only_left_list, x) && !contains(
+            only_right_list,
+            x
+          );
+        }
+      );
+      return unique(_pipe$1);
+    })();
     return from_list(
       toList([
         [left, left_list],
         [right, right_list],
         [only_left, only_left_list],
-        [only_right, only_right_list]
+        [only_right, only_right_list],
+        [contain_both, both_list]
       ])
     );
   } else if (msg instanceof UserListTyping) {
@@ -3611,7 +3685,7 @@ function view(model) {
     throw makeError(
       "let_assert",
       "app",
-      123,
+      138,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
@@ -3623,7 +3697,7 @@ function view(model) {
     throw makeError(
       "let_assert",
       "app",
-      124,
+      139,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $1 }
@@ -3635,7 +3709,7 @@ function view(model) {
     throw makeError(
       "let_assert",
       "app",
-      126,
+      141,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $2 }
@@ -3647,13 +3721,25 @@ function view(model) {
     throw makeError(
       "let_assert",
       "app",
-      127,
+      142,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $3 }
     );
   }
   let only_right_list = $3[0];
+  let $4 = get(model, contain_both);
+  if (!$4.isOk()) {
+    throw makeError(
+      "let_assert",
+      "app",
+      144,
+      "view",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $4 }
+    );
+  }
+  let both_list = $4[0];
   return div(
     toList([
       id("root"),
@@ -3676,7 +3762,7 @@ function view(model) {
       compare_button(),
       div(
         toList([
-          id("view-lists"),
+          id("view-comparison-lists"),
           class$(
             "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
           )
@@ -3685,19 +3771,16 @@ function view(model) {
           text_area(only_left, only_left_list),
           text_area(only_right, only_right_list)
         ])
+      ),
+      div(
+        toList([
+          id("view-both-lists"),
+          class$(
+            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
+          )
+        ]),
+        toList([text_area(contain_both, both_list)])
       )
-    ])
-  );
-}
-var contain_both = "contain-both-list";
-function init2(_) {
-  return from_list(
-    toList([
-      [left, toList([])],
-      [right, toList([])],
-      [only_left, toList([])],
-      [only_right, toList([])],
-      [contain_both, toList([])]
     ])
   );
 }

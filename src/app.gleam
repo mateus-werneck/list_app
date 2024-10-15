@@ -62,12 +62,15 @@ pub fn update(model: Model, msg: Msg) -> Model {
       let assert Ok(only_left_list) = dict.get(model, only_left)
       let assert Ok(only_right_list) = dict.get(model, only_right)
 
-      dict.from_list([
-        #(left, right_list),
-        #(right, left_list),
-        #(only_left, only_right_list),
-        #(only_right, only_left_list),
-      ])
+      dict.merge(
+        model,
+        dict.from_list([
+          #(left, right_list),
+          #(right, left_list),
+          #(only_left, only_right_list),
+          #(only_right, only_left_list),
+        ]),
+      )
     }
 
     UserCompareListContents -> {
@@ -79,11 +82,20 @@ pub fn update(model: Model, msg: Msg) -> Model {
       let only_right_list =
         list.filter(right_list, fn(x) { !list.contains(left_list, x) })
 
+      let both_list =
+        list.concat([left_list, right_list])
+        |> list.filter(fn(x) {
+          !list.contains(only_left_list, x)
+          && !list.contains(only_right_list, x)
+        })
+        |> list.unique
+
       dict.from_list([
         #(left, left_list),
         #(right, right_list),
         #(only_left, only_left_list),
         #(only_right, only_right_list),
+        #(contain_both, both_list),
       ])
     }
 
@@ -101,6 +113,7 @@ pub fn update(model: Model, msg: Msg) -> Model {
 
       dict.upsert(model, name, trim)
     }
+
     UserSortList(name) -> {
       let sort = fn(x) {
         case x {
@@ -111,7 +124,9 @@ pub fn update(model: Model, msg: Msg) -> Model {
 
       dict.upsert(model, name, sort)
     }
+
     UserDeletedList(name) -> dict.merge(model, dict.from_list([#(name, [])]))
+
     UserCopyList(data) -> {
       clipboard(data)
       model
@@ -125,6 +140,8 @@ pub fn view(model: Model) -> element.Element(Msg) {
 
   let assert Ok(only_left_list) = dict.get(model, only_left)
   let assert Ok(only_right_list) = dict.get(model, only_right)
+
+  let assert Ok(both_list) = dict.get(model, contain_both)
 
   html.div(
     [
@@ -148,7 +165,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
       compare_button(),
       html.div(
         [
-          attribute.id("view-lists"),
+          attribute.id("view-comparison-lists"),
           attribute.class(
             "flex flex-col md:flex-row m-auto gap-4 px-4 items-center",
           ),
@@ -157,6 +174,15 @@ pub fn view(model: Model) -> element.Element(Msg) {
           text_area(only_left, only_left_list),
           text_area(only_right, only_right_list),
         ],
+      ),
+      html.div(
+        [
+          attribute.id("view-both-lists"),
+          attribute.class(
+            "flex flex-col md:flex-row m-auto gap-4 px-4 items-center",
+          ),
+        ],
+        [text_area(contain_both, both_list)],
       ),
     ],
   )
