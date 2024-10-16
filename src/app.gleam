@@ -12,6 +12,7 @@ import lustre/event
 import plinth/browser/clipboard
 import plinth/browser/window
 import string/lines
+import views/text_area
 
 pub const left: String = "left-list"
 
@@ -35,12 +36,6 @@ pub type Model =
 pub type Msg {
   UserSwitchListContents
   UserCompareListContents
-
-  UserListTyping(String, String)
-  UserTrimListSpaces(String)
-  UserSortList(String)
-  UserCopyList(String)
-  UserDeletedList(String)
 }
 
 pub fn init(_flags) -> Model {
@@ -171,7 +166,8 @@ pub fn view(model: Model) -> element.Element(Msg) {
 
 fn switch_button() {
   let style =
-    "p-4 bg-slate-400 items-center self-center hover:bg-slate-200 transition delay-75 duration-300 ease-in-out"
+    "p-4 bg-slate-400 items-center self-center"
+    <> " hover:bg-slate-200 transition delay-75 duration-300 ease-in-out"
 
   html.button(
     [
