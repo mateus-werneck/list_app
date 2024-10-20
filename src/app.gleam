@@ -1,10 +1,12 @@
 import gleam/dict
-import gleam/list
+import kielet/context.{Context}
+import kielet/database
+import kielet/language
 import lustre
 import lustre/attribute
 import lustre/element
 import lustre/element/html
-import lustre/event
+import simplifile
 import storage/constants
 import views/compare_button
 import views/switch_button
@@ -16,8 +18,9 @@ pub fn main() {
   Nil
 }
 
-pub type Model =
-  dict.Dict(String, List(String))
+pub type Model {
+  Model(lists: dict.Dict(String, List(String)), ctx: context.Context)
+}
 
 pub type Msg {
   TextViewMsg(text_view.TextAreaMsg)
@@ -26,32 +29,43 @@ pub type Msg {
 }
 
 pub fn init(_flags) -> Model {
-  dict.from_list([
-    #(constants.left, []),
-    #(constants.right, []),
-    #(constants.only_left, []),
-    #(constants.only_right, []),
-    #(constants.contain_both, []),
-  ])
+  let assert Ok(mo_data) = simplifile.read_bits("./translations/pt-br.mo")
+  let assert Ok(portuguese) = language.load("pt_BR", mo_data)
+  let db = database.new() |> database.add_language(portuguese)
+
+  let ctx = Context(db, "pt_BR")
+
+  Model(
+    dict.from_list([
+      #(constants.left, []),
+      #(constants.right, []),
+      #(constants.only_left, []),
+      #(constants.only_right, []),
+      #(constants.contain_both, []),
+    ]),
+    ctx,
+  )
 }
 
 pub fn update(model: Model, msg: Msg) -> Model {
   case msg {
-    TextViewMsg(msg) -> text_view.update(model, msg)
-    SwitchViewMsg(msg) -> switch_button.update(model, msg)
-    CompareViewMsg(msg) -> compare_button.update(model, msg)
+    TextViewMsg(msg) ->
+      Model(..model, lists: text_view.update(model.lists, msg))
+    SwitchViewMsg(msg) ->
+      Model(..model, lists: switch_button.update(model.lists, msg))
+    CompareViewMsg(msg) ->
+      Model(..model, lists: compare_button.update(model.lists, msg))
   }
 }
 
 pub fn view(model: Model) -> element.Element(Msg) {
-  let assert Ok(left_list) = dict.get(model, constants.left)
-  let assert Ok(right_list) = dict.get(model, constants.right)
+  let assert Ok(left_list) = dict.get(model.lists, constants.left)
+  let assert Ok(right_list) = dict.get(model.lists, constants.right)
 
-  let assert Ok(only_left_list) = dict.get(model, constants.only_left)
-  let assert Ok(only_right_list) = dict.get(model, constants.only_right)
+  let assert Ok(only_left_list) = dict.get(model.lists, constants.only_left)
+  let assert Ok(only_right_list) = dict.get(model.lists, constants.only_right)
 
-  let assert Ok(both_list) = dict.get(model, constants.contain_both)
-
+  let assert Ok(both_list) = dict.get(model.lists, constants.contain_both)
   let root_style = "flex flex-col px-4 py-16  m-auto gap-16 items-center"
 
   let view_list_style =
@@ -71,9 +85,10 @@ pub fn view(model: Model) -> element.Element(Msg) {
         fn(a: text_view.TextAreaMsg) { TextViewMsg(a) },
       ),
     ]),
-    element.map(compare_button.view(), fn(a: compare_button.CompareListMsg) {
-      CompareViewMsg(a)
-    }),
+    element.map(
+      compare_button.view(model.ctx),
+      fn(a: compare_button.CompareListMsg) { CompareViewMsg(a) },
+    ),
     html.div(
       [attribute.id("view-comparison-lists"), attribute.class(view_list_style)],
       [

@@ -109,6 +109,11 @@ var BitArray = class _BitArray {
     return new _BitArray(this.buffer.slice(index3));
   }
 };
+var UtfCodepoint = class {
+  constructor(value2) {
+    this.value = value2;
+  }
+};
 function byteArrayToInt(byteArray, start3, end, isBigEndian, isSigned) {
   let value2 = 0;
   if (isBigEndian) {
@@ -270,6 +275,14 @@ function from_result(result) {
     return new None();
   }
 }
+function then$(option, fun) {
+  if (option instanceof Some) {
+    let x = option[0];
+    return fun(x);
+  } else {
+    return new None();
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/order.mjs
 var Lt = class extends CustomType {
@@ -280,6 +293,9 @@ var Gt = class extends CustomType {
 };
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
+function parse(string4) {
+  return parse_int(string4);
+}
 function to_string2(x) {
   return to_string(x);
 }
@@ -298,6 +314,18 @@ function compare(a, b) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
+var Continue = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var Stop = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
 var Ascending = class extends CustomType {
 };
 var Descending = class extends CustomType {
@@ -377,6 +405,34 @@ function do_filter(loop$list, loop$fun, loop$acc) {
 }
 function filter(list, predicate) {
   return do_filter(list, predicate, toList([]));
+}
+function do_filter_map(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let x = list.head;
+      let xs = list.tail;
+      let new_acc = (() => {
+        let $ = fun(x);
+        if ($.isOk()) {
+          let x$1 = $[0];
+          return prepend(x$1, acc);
+        } else {
+          return acc;
+        }
+      })();
+      loop$list = xs;
+      loop$fun = fun;
+      loop$acc = new_acc;
+    }
+  }
+}
+function filter_map(list, fun) {
+  return do_filter_map(list, fun, toList([]));
 }
 function do_map(loop$list, loop$fun, loop$acc) {
   while (true) {
@@ -529,6 +585,52 @@ function do_index_fold(loop$over, loop$acc, loop$with, loop$index) {
 function index_fold(over, initial, fun) {
   return do_index_fold(over, initial, fun, 0);
 }
+function try_fold(loop$collection, loop$accumulator, loop$fun) {
+  while (true) {
+    let collection = loop$collection;
+    let accumulator = loop$accumulator;
+    let fun = loop$fun;
+    if (collection.hasLength(0)) {
+      return new Ok(accumulator);
+    } else {
+      let first$1 = collection.head;
+      let rest$1 = collection.tail;
+      let $ = fun(accumulator, first$1);
+      if ($.isOk()) {
+        let result = $[0];
+        loop$collection = rest$1;
+        loop$accumulator = result;
+        loop$fun = fun;
+      } else {
+        let error = $;
+        return error;
+      }
+    }
+  }
+}
+function fold_until(loop$collection, loop$accumulator, loop$fun) {
+  while (true) {
+    let collection = loop$collection;
+    let accumulator = loop$accumulator;
+    let fun = loop$fun;
+    if (collection.hasLength(0)) {
+      return accumulator;
+    } else {
+      let first$1 = collection.head;
+      let rest$1 = collection.tail;
+      let $ = fun(accumulator, first$1);
+      if ($ instanceof Continue) {
+        let next_accumulator = $[0];
+        loop$collection = rest$1;
+        loop$accumulator = next_accumulator;
+        loop$fun = fun;
+      } else {
+        let b = $[0];
+        return b;
+      }
+    }
+  }
+}
 function unique(list) {
   if (list.hasLength(0)) {
     return toList([]);
@@ -594,10 +696,10 @@ function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$p
         if (rest$1.hasLength(0)) {
           return prepend(toList([new$1]), acc$1);
         } else {
-          let next = rest$1.head;
+          let next2 = rest$1.head;
           let rest$2 = rest$1.tail;
           let direction$1 = (() => {
-            let $1 = compare4(new$1, next);
+            let $1 = compare4(new$1, next2);
             if ($1 instanceof Lt) {
               return new Ascending();
             } else if ($1 instanceof Eq) {
@@ -610,7 +712,7 @@ function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$p
           loop$compare = compare4;
           loop$growing = toList([new$1]);
           loop$direction = direction$1;
-          loop$prev = next;
+          loop$prev = next2;
           loop$acc = acc$1;
         }
       } else if ($ instanceof Lt && direction instanceof Descending) {
@@ -624,10 +726,10 @@ function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$p
         if (rest$1.hasLength(0)) {
           return prepend(toList([new$1]), acc$1);
         } else {
-          let next = rest$1.head;
+          let next2 = rest$1.head;
           let rest$2 = rest$1.tail;
           let direction$1 = (() => {
-            let $1 = compare4(new$1, next);
+            let $1 = compare4(new$1, next2);
             if ($1 instanceof Lt) {
               return new Ascending();
             } else if ($1 instanceof Eq) {
@@ -640,7 +742,7 @@ function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$p
           loop$compare = compare4;
           loop$growing = toList([new$1]);
           loop$direction = direction$1;
-          loop$prev = next;
+          loop$prev = next2;
           loop$acc = acc$1;
         }
       } else {
@@ -654,10 +756,10 @@ function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$p
         if (rest$1.hasLength(0)) {
           return prepend(toList([new$1]), acc$1);
         } else {
-          let next = rest$1.head;
+          let next2 = rest$1.head;
           let rest$2 = rest$1.tail;
           let direction$1 = (() => {
-            let $1 = compare4(new$1, next);
+            let $1 = compare4(new$1, next2);
             if ($1 instanceof Lt) {
               return new Ascending();
             } else if ($1 instanceof Eq) {
@@ -670,7 +772,7 @@ function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$p
           loop$compare = compare4;
           loop$growing = toList([new$1]);
           loop$direction = direction$1;
-          loop$prev = next;
+          loop$prev = next2;
           loop$acc = acc$1;
         }
       }
@@ -866,6 +968,28 @@ function sort(list, compare4) {
     return merge_all(sequences$1, new Ascending(), compare4);
   }
 }
+function tail_recursive_range(loop$start, loop$stop, loop$acc) {
+  while (true) {
+    let start3 = loop$start;
+    let stop2 = loop$stop;
+    let acc = loop$acc;
+    let $ = compare(start3, stop2);
+    if ($ instanceof Eq) {
+      return prepend(stop2, acc);
+    } else if ($ instanceof Gt) {
+      loop$start = start3;
+      loop$stop = stop2 + 1;
+      loop$acc = prepend(stop2, acc);
+    } else {
+      loop$start = start3;
+      loop$stop = stop2 - 1;
+      loop$acc = prepend(stop2, acc);
+    }
+  }
+}
+function range(start3, stop2) {
+  return tail_recursive_range(start3, stop2, toList([]));
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/result.mjs
 function map2(result, fun) {
@@ -895,9 +1019,17 @@ function try$(result, fun) {
     return new Error(e);
   }
 }
+function replace_error(result, error) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(x);
+  } else {
+    return new Error(error);
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/iterator.mjs
-var Stop = class extends CustomType {
+var Stop2 = class extends CustomType {
 };
 var Continue2 = class extends CustomType {
   constructor(x0, x1) {
@@ -922,7 +1054,7 @@ var Next = class extends CustomType {
 var Done = class extends CustomType {
 };
 function stop() {
-  return new Stop();
+  return new Stop2();
 }
 function do_unfold(initial, f) {
   return () => {
@@ -932,7 +1064,7 @@ function do_unfold(initial, f) {
       let acc = $.accumulator;
       return new Continue2(x, do_unfold(acc, f));
     } else {
-      return new Stop();
+      return new Stop2();
     }
   };
 }
@@ -946,17 +1078,17 @@ function do_drop(loop$continuation, loop$desired) {
     let continuation = loop$continuation;
     let desired = loop$desired;
     let $ = continuation();
-    if ($ instanceof Stop) {
-      return new Stop();
+    if ($ instanceof Stop2) {
+      return new Stop2();
     } else {
       let e = $[0];
-      let next = $[1];
+      let next2 = $[1];
       let $1 = desired > 0;
       if ($1) {
-        loop$continuation = next;
+        loop$continuation = next2;
         loop$desired = desired - 1;
       } else {
-        return new Continue2(e, next);
+        return new Continue2(e, next2);
       }
     }
   }
@@ -970,8 +1102,8 @@ function drop2(iterator, desired) {
 function do_map2(continuation, f) {
   return () => {
     let $ = continuation();
-    if ($ instanceof Stop) {
-      return new Stop();
+    if ($ instanceof Stop2) {
+      return new Stop2();
     } else {
       let e = $[0];
       let continuation$1 = $[1];
@@ -989,8 +1121,8 @@ function do_filter2(loop$continuation, loop$predicate) {
     let continuation = loop$continuation;
     let predicate = loop$predicate;
     let $ = continuation();
-    if ($ instanceof Stop) {
-      return new Stop();
+    if ($ instanceof Stop2) {
+      return new Stop2();
     } else {
       let e = $[0];
       let iterator = $[1];
@@ -1018,7 +1150,7 @@ function once(f) {
   };
   return new Iterator(_pipe);
 }
-function range(start3, stop2) {
+function range2(start3, stop2) {
   let $ = compare(start3, stop2);
   if ($ instanceof Eq) {
     return once(() => {
@@ -1052,7 +1184,7 @@ function range(start3, stop2) {
 }
 function first(iterator) {
   let $ = iterator.continuation();
-  if ($ instanceof Stop) {
+  if ($ instanceof Stop2) {
     return new Error(void 0);
   } else {
     let e = $[0];
@@ -1096,6 +1228,9 @@ function compare3(a, b) {
     }
   }
 }
+function split_once2(x, substring) {
+  return split_once(x, substring);
+}
 function concat3(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
@@ -1103,6 +1238,9 @@ function concat3(strings) {
 }
 function join2(strings, separator) {
   return join(strings, separator);
+}
+function trim2(string4) {
+  return trim(string4);
 }
 function do_slice(string4, idx, len) {
   let _pipe = string4;
@@ -1148,14 +1286,23 @@ function split3(x, substring) {
     return map(_pipe$2, to_string3);
   }
 }
+function inspect2(term) {
+  let _pipe = inspect(term);
+  return to_string3(_pipe);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/bit_array.mjs
+function to_string4(bits) {
+  return bit_array_to_string(bits);
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
 var DecodeError = class extends CustomType {
-  constructor(expected, found, path) {
+  constructor(expected, found, path2) {
     super();
     this.expected = expected;
     this.found = found;
-    this.path = path;
+    this.path = path2;
   }
 };
 function classify(data) {
@@ -1937,6 +2084,13 @@ var NOT_FOUND = {};
 function identity(x) {
   return x;
 }
+function parse_int(value2) {
+  if (/^[-+]?(\d+)$/.test(value2)) {
+    return new Ok(parseInt(value2));
+  } else {
+    return new Error(Nil);
+  }
+}
 function to_string(term) {
   return term.toString();
 }
@@ -1991,6 +2145,19 @@ function concat2(xs) {
   }
   return result;
 }
+function length2(data) {
+  return data.length;
+}
+function split_once(haystack, needle) {
+  const index3 = haystack.indexOf(needle);
+  if (index3 >= 0) {
+    const before = haystack.slice(0, index3);
+    const after = haystack.slice(index3 + needle.length);
+    return new Ok([before, after]);
+  } else {
+    return new Error(Nil);
+  }
+}
 var unicode_whitespaces = [
   " ",
   // Space
@@ -2013,21 +2180,51 @@ var unicode_whitespaces = [
 ].join("");
 var left_trim_regex = new RegExp(`^([${unicode_whitespaces}]*)`, "g");
 var right_trim_regex = new RegExp(`([${unicode_whitespaces}]*)$`, "g");
+function trim(string4) {
+  return trim_left(trim_right(string4));
+}
+function trim_left(string4) {
+  return string4.replace(left_trim_regex, "");
+}
+function trim_right(string4) {
+  return string4.replace(right_trim_regex, "");
+}
+function bit_array_to_string(bit_array) {
+  try {
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    return new Ok(decoder.decode(bit_array.buffer));
+  } catch {
+    return new Error(Nil);
+  }
+}
+function bit_array_slice(bits, position, length5) {
+  const start3 = Math.min(position, position + length5);
+  const end = Math.max(position, position + length5);
+  if (start3 < 0 || end > bits.length)
+    return new Error(Nil);
+  const byteOffset = bits.buffer.byteOffset + start3;
+  const buffer = new Uint8Array(
+    bits.buffer.buffer,
+    byteOffset,
+    Math.abs(length5)
+  );
+  return new Ok(new BitArray(buffer));
+}
 function new_map() {
   return Dict.new();
 }
-function map_to_list(map7) {
-  return List.fromArray(map7.entries());
+function map_to_list(map9) {
+  return List.fromArray(map9.entries());
 }
-function map_get(map7, key2) {
-  const value2 = map7.get(key2, NOT_FOUND);
+function map_get(map9, key2) {
+  const value2 = map9.get(key2, NOT_FOUND);
   if (value2 === NOT_FOUND) {
     return new Error(Nil);
   }
   return new Ok(value2);
 }
-function map_insert(key2, value2, map7) {
-  return map7.set(key2, value2);
+function map_insert(key2, value2, map9) {
+  return map9.set(key2, value2);
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -2090,6 +2287,120 @@ function try_get_field(value2, field2, or_else) {
   } catch {
     return or_else();
   }
+}
+function bitwise_shift_left(x, y) {
+  return Number(BigInt(x) << BigInt(y));
+}
+function inspect(v) {
+  const t = typeof v;
+  if (v === true)
+    return "True";
+  if (v === false)
+    return "False";
+  if (v === null)
+    return "//js(null)";
+  if (v === void 0)
+    return "Nil";
+  if (t === "string")
+    return inspectString(v);
+  if (t === "bigint" || t === "number")
+    return v.toString();
+  if (Array.isArray(v))
+    return `#(${v.map(inspect).join(", ")})`;
+  if (v instanceof List)
+    return inspectList(v);
+  if (v instanceof UtfCodepoint)
+    return inspectUtfCodepoint(v);
+  if (v instanceof BitArray)
+    return inspectBitArray(v);
+  if (v instanceof CustomType)
+    return inspectCustomType(v);
+  if (v instanceof Dict)
+    return inspectDict(v);
+  if (v instanceof Set)
+    return `//js(Set(${[...v].map(inspect).join(", ")}))`;
+  if (v instanceof RegExp)
+    return `//js(${v})`;
+  if (v instanceof Date)
+    return `//js(Date("${v.toISOString()}"))`;
+  if (v instanceof Function) {
+    const args = [];
+    for (const i of Array(v.length).keys())
+      args.push(String.fromCharCode(i + 97));
+    return `//fn(${args.join(", ")}) { ... }`;
+  }
+  return inspectObject(v);
+}
+function inspectString(str) {
+  let new_str = '"';
+  for (let i = 0; i < str.length; i++) {
+    let char = str[i];
+    switch (char) {
+      case "\n":
+        new_str += "\\n";
+        break;
+      case "\r":
+        new_str += "\\r";
+        break;
+      case "	":
+        new_str += "\\t";
+        break;
+      case "\f":
+        new_str += "\\f";
+        break;
+      case "\\":
+        new_str += "\\\\";
+        break;
+      case '"':
+        new_str += '\\"';
+        break;
+      default:
+        if (char < " " || char > "~" && char < "\xA0") {
+          new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
+        } else {
+          new_str += char;
+        }
+    }
+  }
+  new_str += '"';
+  return new_str;
+}
+function inspectDict(map9) {
+  let body = "dict.from_list([";
+  let first3 = true;
+  map9.forEach((value2, key2) => {
+    if (!first3)
+      body = body + ", ";
+    body = body + "#(" + inspect(key2) + ", " + inspect(value2) + ")";
+    first3 = false;
+  });
+  return body + "])";
+}
+function inspectObject(v) {
+  const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+  const props = [];
+  for (const k of Object.keys(v)) {
+    props.push(`${inspect(k)}: ${inspect(v[k])}`);
+  }
+  const body = props.length ? " " + props.join(", ") + " " : "";
+  const head = name === "Object" ? "" : name + " ";
+  return `//js(${head}{${body}})`;
+}
+function inspectCustomType(record) {
+  const props = Object.keys(record).map((label) => {
+    const value2 = inspect(record[label]);
+    return isNaN(parseInt(label)) ? `${label}: ${value2}` : value2;
+  }).join(", ");
+  return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+}
+function inspectList(list) {
+  return `[${list.toArray().map(inspect).join(", ")}]`;
+}
+function inspectBitArray(bits) {
+  return `<<${Array.from(bits.buffer).join(", ")}>>`;
+}
+function inspectUtfCodepoint(codepoint2) {
+  return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/dict.mjs
@@ -2197,6 +2508,1859 @@ function guard(requirement, consequence, alternative) {
     return alternative();
   }
 }
+
+// build/dev/javascript/kielet/kielet/mo.mjs
+var SingularStr = class extends CustomType {
+  constructor(context, content) {
+    super();
+    this.context = context;
+    this.content = content;
+  }
+};
+var PluralStr = class extends CustomType {
+  constructor(context, content) {
+    super();
+    this.context = context;
+    this.content = content;
+  }
+};
+var Singular = class extends CustomType {
+  constructor(content) {
+    super();
+    this.content = content;
+  }
+};
+var Plural = class extends CustomType {
+  constructor(content) {
+    super();
+    this.content = content;
+  }
+};
+var NoContext = class extends CustomType {
+  constructor(content) {
+    super();
+    this.content = content;
+  }
+};
+var WithContext = class extends CustomType {
+  constructor(context, content) {
+    super();
+    this.context = context;
+    this.content = content;
+  }
+};
+var BigEndian = class extends CustomType {
+};
+var LittleEndian = class extends CustomType {
+};
+var MagicNumberNotFound = class extends CustomType {
+};
+var MalformedHeader = class extends CustomType {
+};
+var UnknownRevision = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var OffsetPastEnd = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var MalformedOffsetTableEntry = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var StringNotUTF8 = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var MetaItemMissing = class extends CustomType {
+};
+var MetaItemIsNotSingular = class extends CustomType {
+};
+var PluralFormWithZeroEntries = class extends CustomType {
+  constructor(index3) {
+    super();
+    this.index = index3;
+  }
+};
+var Revision = class extends CustomType {
+  constructor(major, minor) {
+    super();
+    this.major = major;
+    this.minor = minor;
+  }
+};
+var Header = class extends CustomType {
+  constructor(revision, string_count, og_table_offset, trans_table_offset, ht_size, ht_offset) {
+    super();
+    this.revision = revision;
+    this.string_count = string_count;
+    this.og_table_offset = og_table_offset;
+    this.trans_table_offset = trans_table_offset;
+    this.ht_size = ht_size;
+    this.ht_offset = ht_offset;
+  }
+};
+var Mo = class extends CustomType {
+  constructor(endianness, header, translations, metadata) {
+    super();
+    this.endianness = endianness;
+    this.header = header;
+    this.translations = translations;
+    this.metadata = metadata;
+  }
+};
+var EndiannessHandler = class extends CustomType {
+  constructor(int_8, int_32) {
+    super();
+    this.int_8 = int_8;
+    this.int_32 = int_32;
+  }
+};
+function parse_magic(body) {
+  if (body.intFromSlice(0, 4, true, false) === 3725722773 && body.length >= 4) {
+    let rest = body.sliceAfter(4);
+    return new Ok([new LittleEndian(), rest]);
+  } else if (body.intFromSlice(0, 4, true, false) === 2500072158 && body.length >= 4) {
+    let rest = body.sliceAfter(4);
+    return new Ok([new BigEndian(), rest]);
+  } else {
+    return new Error(new MagicNumberNotFound());
+  }
+}
+function parse_header(eh, body) {
+  if (body.length >= 24) {
+    let major_bytes = body.binaryFromSlice(0, 2);
+    let minor_bytes = body.binaryFromSlice(2, 4);
+    let string_count_bytes = body.binaryFromSlice(4, 8);
+    let og_table_offset_bytes = body.binaryFromSlice(8, 12);
+    let trans_table_offset_bytes = body.binaryFromSlice(12, 16);
+    let ht_size_bytes = body.binaryFromSlice(16, 20);
+    let ht_offset_bytes = body.binaryFromSlice(20, 24);
+    let $ = eh.int_8(major_bytes);
+    if (!$.isOk()) {
+      throw makeError(
+        "let_assert",
+        "kielet/mo",
+        191,
+        "parse_header",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $ }
+      );
+    }
+    let major = $[0];
+    let $1 = eh.int_8(minor_bytes);
+    if (!$1.isOk()) {
+      throw makeError(
+        "let_assert",
+        "kielet/mo",
+        192,
+        "parse_header",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $1 }
+      );
+    }
+    let minor = $1[0];
+    let $2 = eh.int_32(string_count_bytes);
+    if (!$2.isOk()) {
+      throw makeError(
+        "let_assert",
+        "kielet/mo",
+        193,
+        "parse_header",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $2 }
+      );
+    }
+    let string_count = $2[0];
+    let $3 = eh.int_32(og_table_offset_bytes);
+    if (!$3.isOk()) {
+      throw makeError(
+        "let_assert",
+        "kielet/mo",
+        194,
+        "parse_header",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $3 }
+      );
+    }
+    let og_table_offset = $3[0];
+    let $4 = eh.int_32(trans_table_offset_bytes);
+    if (!$4.isOk()) {
+      throw makeError(
+        "let_assert",
+        "kielet/mo",
+        195,
+        "parse_header",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $4 }
+      );
+    }
+    let trans_table_offset = $4[0];
+    let $5 = eh.int_32(ht_size_bytes);
+    if (!$5.isOk()) {
+      throw makeError(
+        "let_assert",
+        "kielet/mo",
+        196,
+        "parse_header",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $5 }
+      );
+    }
+    let ht_size = $5[0];
+    let $6 = eh.int_32(ht_offset_bytes);
+    if (!$6.isOk()) {
+      throw makeError(
+        "let_assert",
+        "kielet/mo",
+        197,
+        "parse_header",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $6 }
+      );
+    }
+    let ht_offset = $6[0];
+    return new Ok(
+      new Header(
+        new Revision(major, minor),
+        string_count,
+        og_table_offset,
+        trans_table_offset,
+        ht_size,
+        ht_offset
+      )
+    );
+  } else {
+    return new Error(new MalformedHeader());
+  }
+}
+function parse_offset_table_entry(eh, mo, offset) {
+  return try$(
+    (() => {
+      let _pipe = bit_array_slice(mo, offset, 8);
+      return replace_error(_pipe, new OffsetPastEnd(offset));
+    })(),
+    (data) => {
+      if (data.length == 8) {
+        let target_length = data.binaryFromSlice(0, 4);
+        let target_offset = data.binaryFromSlice(4, 8);
+        let $ = eh.int_32(target_length);
+        if (!$.isOk()) {
+          throw makeError(
+            "let_assert",
+            "kielet/mo",
+            286,
+            "",
+            "Pattern match failed, no pattern matched the value.",
+            { value: $ }
+          );
+        }
+        let target_length$1 = $[0];
+        let $1 = eh.int_32(target_offset);
+        if (!$1.isOk()) {
+          throw makeError(
+            "let_assert",
+            "kielet/mo",
+            287,
+            "",
+            "Pattern match failed, no pattern matched the value.",
+            { value: $1 }
+          );
+        }
+        let target_offset$1 = $1[0];
+        return new Ok([target_length$1, target_offset$1]);
+      } else {
+        return new Error(new MalformedOffsetTableEntry(data));
+      }
+    }
+  );
+}
+function parse_metadata(translations) {
+  return try$(
+    (() => {
+      let _pipe = get(translations, new NoContext(""));
+      return replace_error(_pipe, new MetaItemMissing());
+    })(),
+    (meta) => {
+      if (meta instanceof Plural) {
+        return new Error(new MetaItemIsNotSingular());
+      } else {
+        let content = meta.content;
+        let metadata = (() => {
+          let _pipe = content;
+          let _pipe$1 = split3(_pipe, "\n");
+          let _pipe$2 = map(
+            _pipe$1,
+            (line) => {
+              return split3(line, ":");
+            }
+          );
+          let _pipe$3 = map(
+            _pipe$2,
+            (item) => {
+              if (item.hasLength(0)) {
+                return ["", ""];
+              } else if (item.hasLength(1)) {
+                let key2 = item.head;
+                return [trim2(key2), ""];
+              } else {
+                let key2 = item.head;
+                let rest = item.tail;
+                return [
+                  trim2(key2),
+                  trim2(join2(rest, ":"))
+                ];
+              }
+            }
+          );
+          return from_list(_pipe$3);
+        })();
+        return new Ok(metadata);
+      }
+    }
+  );
+}
+function reconstruct_ui8(h, l) {
+  return bitwise_shift_left(h, 8) + l;
+}
+function le_int_8(int8) {
+  if (int8.length == 2) {
+    let l = int8.byteAt(0);
+    let h = int8.byteAt(1);
+    return new Ok(reconstruct_ui8(h, l));
+  } else {
+    return new Error(void 0);
+  }
+}
+function be_int_8(int8) {
+  if (int8.length == 2) {
+    let h = int8.byteAt(0);
+    let l = int8.byteAt(1);
+    return new Ok(reconstruct_ui8(h, l));
+  } else {
+    return new Error(void 0);
+  }
+}
+function reconstruct_ui32(hh, hl, lh, ll) {
+  return bitwise_shift_left(hh, 8 * 3) + bitwise_shift_left(
+    hl,
+    8 * 2
+  ) + bitwise_shift_left(lh, 8) + ll;
+}
+function le_int_32(int32) {
+  if (int32.length == 4) {
+    let ll = int32.byteAt(0);
+    let lh = int32.byteAt(1);
+    let hl = int32.byteAt(2);
+    let hh = int32.byteAt(3);
+    return new Ok(reconstruct_ui32(hh, hl, lh, ll));
+  } else {
+    return new Error(void 0);
+  }
+}
+function be_int_32(int32) {
+  if (int32.length == 4) {
+    let hh = int32.byteAt(0);
+    let hl = int32.byteAt(1);
+    let lh = int32.byteAt(2);
+    let ll = int32.byteAt(3);
+    return new Ok(reconstruct_ui32(hh, hl, lh, ll));
+  } else {
+    return new Error(void 0);
+  }
+}
+var max_supported_major = 0;
+var eot = "";
+var nul = "\0";
+function parse_mo_string(mo, length5, offset) {
+  return try$(
+    (() => {
+      let _pipe = bit_array_slice(mo, offset, length5);
+      return replace_error(_pipe, new OffsetPastEnd(offset));
+    })(),
+    (data) => {
+      return try$(
+        (() => {
+          let _pipe = to_string4(data);
+          return replace_error(_pipe, new StringNotUTF8(data));
+        })(),
+        (str) => {
+          let $ = (() => {
+            let $12 = split_once2(str, eot);
+            if ($12.isOk()) {
+              let c = $12[0][0];
+              let s = $12[0][1];
+              return [new Some(c), s];
+            } else {
+              return [new None(), str];
+            }
+          })();
+          let context = $[0];
+          let str$1 = $[1];
+          let $1 = split3(str$1, nul);
+          if ($1.hasLength(1)) {
+            return new Ok(new SingularStr(context, str$1));
+          } else {
+            let plurals = $1;
+            return new Ok(
+              new PluralStr(
+                context,
+                (() => {
+                  let _pipe = plurals;
+                  let _pipe$1 = index_map(
+                    _pipe,
+                    (msg, i) => {
+                      return [i, msg];
+                    }
+                  );
+                  return from_list(_pipe$1);
+                })()
+              )
+            );
+          }
+        }
+      );
+    }
+  );
+}
+function parse_translation(eh, mo, og_offset, trans_offset) {
+  return try$(
+    parse_offset_table_entry(eh, mo, og_offset),
+    (_use0) => {
+      let og_str_length = _use0[0];
+      let og_str_offset = _use0[1];
+      return try$(
+        parse_offset_table_entry(eh, mo, trans_offset),
+        (_use02) => {
+          let trans_str_length = _use02[0];
+          let trans_str_offset = _use02[1];
+          return try$(
+            parse_mo_string(mo, og_str_length, og_str_offset),
+            (og_string) => {
+              return try$(
+                parse_mo_string(mo, trans_str_length, trans_str_offset),
+                (trans_string) => {
+                  return new Ok([og_string, trans_string]);
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+}
+function parse_translations(eh, header, mo) {
+  let strings = range(0, header.string_count - 1);
+  return try$(
+    try_fold(
+      strings,
+      new$(),
+      (translations, i) => {
+        let new_offset = i * 8;
+        let og_offset = header.og_table_offset + new_offset;
+        let trans_offset = header.trans_table_offset + new_offset;
+        return try$(
+          parse_translation(eh, mo, og_offset, trans_offset),
+          (_use0) => {
+            let og = _use0[0];
+            let translation = _use0[1];
+            return try$(
+              (() => {
+                if (og instanceof SingularStr) {
+                  let context = og.context;
+                  let content = og.content;
+                  if (context instanceof Some) {
+                    let context$1 = context[0];
+                    return new Ok(new WithContext(context$1, content));
+                  } else {
+                    return new Ok(new NoContext(content));
+                  }
+                } else {
+                  let context = og.context;
+                  let content = og.content;
+                  let $ = get(content, 0);
+                  if ($.isOk()) {
+                    let content$1 = $[0];
+                    if (context instanceof Some) {
+                      let context$1 = context[0];
+                      return new Ok(new WithContext(context$1, content$1));
+                    } else {
+                      return new Ok(new NoContext(content$1));
+                    }
+                  } else {
+                    return new Error(new PluralFormWithZeroEntries(i));
+                  }
+                }
+              })(),
+              (key2) => {
+                let translation_output = (() => {
+                  if (translation instanceof SingularStr) {
+                    let content = translation.content;
+                    return new Singular(content);
+                  } else {
+                    let content = translation.content;
+                    return new Plural(content);
+                  }
+                })();
+                return new Ok(
+                  insert(translations, key2, translation_output)
+                );
+              }
+            );
+          }
+        );
+      }
+    ),
+    (translations) => {
+      return new Ok(translations);
+    }
+  );
+}
+function parse2(mo) {
+  return try$(
+    parse_magic(mo),
+    (_use0) => {
+      let endianness = _use0[0];
+      let rest = _use0[1];
+      let endianness_handler = (() => {
+        if (endianness instanceof LittleEndian) {
+          return new EndiannessHandler(le_int_8, le_int_32);
+        } else {
+          return new EndiannessHandler(be_int_8, be_int_32);
+        }
+      })();
+      return try$(
+        parse_header(endianness_handler, rest),
+        (header) => {
+          return guard(
+            header.revision.major > max_supported_major,
+            new Error(new UnknownRevision(header.revision)),
+            () => {
+              return guard(
+                header.string_count === 0,
+                new Ok(new Mo(endianness, header, new$(), new$())),
+                () => {
+                  let total_size = length2(mo);
+                  return guard(
+                    header.og_table_offset >= total_size,
+                    new Error(new OffsetPastEnd(header.og_table_offset)),
+                    () => {
+                      return guard(
+                        header.trans_table_offset >= total_size,
+                        new Error(new OffsetPastEnd(header.trans_table_offset)),
+                        () => {
+                          return guard(
+                            header.ht_offset >= total_size,
+                            new Error(new OffsetPastEnd(header.ht_offset)),
+                            () => {
+                              return try$(
+                                parse_translations(
+                                  endianness_handler,
+                                  header,
+                                  mo
+                                ),
+                                (translations) => {
+                                  return try$(
+                                    parse_metadata(translations),
+                                    (metadata) => {
+                                      return new Ok(
+                                        new Mo(
+                                          endianness,
+                                          header,
+                                          translations,
+                                          metadata
+                                        )
+                                      );
+                                    }
+                                  );
+                                }
+                              );
+                            }
+                          );
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/set.mjs
+var Set2 = class extends CustomType {
+  constructor(dict) {
+    super();
+    this.dict = dict;
+  }
+};
+function new$2() {
+  return new Set2(new$());
+}
+
+// build/dev/javascript/nibble/nibble/lexer.mjs
+var Token = class extends CustomType {
+  constructor(span2, lexeme, value2) {
+    super();
+    this.span = span2;
+    this.lexeme = lexeme;
+    this.value = value2;
+  }
+};
+var Span = class extends CustomType {
+  constructor(row_start, col_start, row_end, col_end) {
+    super();
+    this.row_start = row_start;
+    this.col_start = col_start;
+    this.row_end = row_end;
+    this.col_end = col_end;
+  }
+};
+
+// build/dev/javascript/nibble/nibble.mjs
+var Parser = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var Cont = class extends CustomType {
+  constructor(x0, x1, x2) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+    this[2] = x2;
+  }
+};
+var Fail = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var State = class extends CustomType {
+  constructor(src2, idx, pos, ctx) {
+    super();
+    this.src = src2;
+    this.idx = idx;
+    this.pos = pos;
+    this.ctx = ctx;
+  }
+};
+var CanBacktrack = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var Continue3 = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var Break = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var EndOfInput = class extends CustomType {
+};
+var Expected = class extends CustomType {
+  constructor(x0, got) {
+    super();
+    this[0] = x0;
+    this.got = got;
+  }
+};
+var Unexpected = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var DeadEnd = class extends CustomType {
+  constructor(pos, problem, context) {
+    super();
+    this.pos = pos;
+    this.problem = problem;
+    this.context = context;
+  }
+};
+var Empty2 = class extends CustomType {
+};
+var Cons = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var Append = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+function runwrap(state, parser) {
+  let parse6 = parser[0];
+  return parse6(state);
+}
+function next(state) {
+  let $ = get(state.src, state.idx);
+  if (!$.isOk()) {
+    return [new None(), state];
+  } else {
+    let span$1 = $[0].span;
+    let tok = $[0].value;
+    return [
+      new Some(tok),
+      state.withFields({ idx: state.idx + 1, pos: span$1 })
+    ];
+  }
+}
+function return$(value2) {
+  return new Parser(
+    (state) => {
+      return new Cont(new CanBacktrack(false), value2, state);
+    }
+  );
+}
+function lazy(parser) {
+  return new Parser((state) => {
+    return runwrap(state, parser());
+  });
+}
+function should_commit(a, b) {
+  let a$1 = a[0];
+  let b$1 = b[0];
+  return new CanBacktrack(a$1 || b$1);
+}
+function do$(parser, f) {
+  return new Parser(
+    (state) => {
+      let $ = runwrap(state, parser);
+      if ($ instanceof Cont) {
+        let to_a = $[0];
+        let a = $[1];
+        let state$1 = $[2];
+        let $1 = runwrap(state$1, f(a));
+        if ($1 instanceof Cont) {
+          let to_b = $1[0];
+          let b = $1[1];
+          let state$2 = $1[2];
+          return new Cont(should_commit(to_a, to_b), b, state$2);
+        } else {
+          let to_b = $1[0];
+          let bag = $1[1];
+          return new Fail(should_commit(to_a, to_b), bag);
+        }
+      } else {
+        let can_backtrack = $[0];
+        let bag = $[1];
+        return new Fail(can_backtrack, bag);
+      }
+    }
+  );
+}
+function map5(parser, f) {
+  return do$(parser, (a) => {
+    return return$(f(a));
+  });
+}
+function loop_help(loop$f, loop$commit, loop$loop_state, loop$state) {
+  while (true) {
+    let f = loop$f;
+    let commit = loop$commit;
+    let loop_state = loop$loop_state;
+    let state = loop$state;
+    let $ = runwrap(state, f(loop_state));
+    if ($ instanceof Cont && $[1] instanceof Continue3) {
+      let can_backtrack = $[0];
+      let next_loop_state = $[1][0];
+      let next_state = $[2];
+      loop$f = f;
+      loop$commit = should_commit(commit, can_backtrack);
+      loop$loop_state = next_loop_state;
+      loop$state = next_state;
+    } else if ($ instanceof Cont && $[1] instanceof Break) {
+      let can_backtrack = $[0];
+      let result = $[1][0];
+      let next_state = $[2];
+      return new Cont(should_commit(commit, can_backtrack), result, next_state);
+    } else {
+      let can_backtrack = $[0];
+      let bag = $[1];
+      return new Fail(should_commit(commit, can_backtrack), bag);
+    }
+  }
+}
+function loop(init3, step) {
+  return new Parser(
+    (state) => {
+      return loop_help(step, new CanBacktrack(false), init3, state);
+    }
+  );
+}
+function bag_from_state(state, problem) {
+  return new Cons(new Empty2(), new DeadEnd(state.pos, problem, state.ctx));
+}
+function token(tok) {
+  return new Parser(
+    (state) => {
+      let $ = next(state);
+      if ($[0] instanceof Some && isEqual(tok, $[0][0])) {
+        let t = $[0][0];
+        let state$1 = $[1];
+        return new Cont(new CanBacktrack(true), void 0, state$1);
+      } else if ($[0] instanceof Some) {
+        let t = $[0][0];
+        let state$1 = $[1];
+        return new Fail(
+          new CanBacktrack(false),
+          bag_from_state(state$1, new Expected(inspect2(tok), t))
+        );
+      } else {
+        let state$1 = $[1];
+        return new Fail(
+          new CanBacktrack(false),
+          bag_from_state(state$1, new EndOfInput())
+        );
+      }
+    }
+  );
+}
+function eof() {
+  return new Parser(
+    (state) => {
+      let $ = next(state);
+      if ($[0] instanceof Some) {
+        let tok = $[0][0];
+        let state$1 = $[1];
+        return new Fail(
+          new CanBacktrack(false),
+          bag_from_state(state$1, new Unexpected(tok))
+        );
+      } else {
+        return new Cont(new CanBacktrack(false), void 0, state);
+      }
+    }
+  );
+}
+function take_map(expecting, f) {
+  return new Parser(
+    (state) => {
+      let $ = next(state);
+      let tok = $[0];
+      let next_state = $[1];
+      let $1 = then$(tok, f);
+      if (tok instanceof None) {
+        return new Fail(
+          new CanBacktrack(false),
+          bag_from_state(next_state, new EndOfInput())
+        );
+      } else if (tok instanceof Some && $1 instanceof None) {
+        let tok$1 = tok[0];
+        return new Fail(
+          new CanBacktrack(false),
+          bag_from_state(next_state, new Expected(expecting, tok$1))
+        );
+      } else {
+        let a = $1[0];
+        return new Cont(new CanBacktrack(false), a, next_state);
+      }
+    }
+  );
+}
+function to_deadends(loop$bag, loop$acc) {
+  while (true) {
+    let bag = loop$bag;
+    let acc = loop$acc;
+    if (bag instanceof Empty2) {
+      return acc;
+    } else if (bag instanceof Cons && bag[0] instanceof Empty2) {
+      let deadend = bag[1];
+      return prepend(deadend, acc);
+    } else if (bag instanceof Cons) {
+      let bag$1 = bag[0];
+      let deadend = bag[1];
+      loop$bag = bag$1;
+      loop$acc = prepend(deadend, acc);
+    } else {
+      let left2 = bag[0];
+      let right2 = bag[1];
+      loop$bag = left2;
+      loop$acc = to_deadends(right2, acc);
+    }
+  }
+}
+function run(src2, parser) {
+  let src$1 = index_fold(
+    src2,
+    new$(),
+    (dict, tok, idx) => {
+      return insert(dict, idx, tok);
+    }
+  );
+  let init3 = new State(src$1, 0, new Span(1, 1, 1, 1), toList([]));
+  let $ = runwrap(init3, parser);
+  if ($ instanceof Cont) {
+    let a = $[1];
+    return new Ok(a);
+  } else {
+    let bag = $[1];
+    return new Error(to_deadends(bag, toList([])));
+  }
+}
+function add_bag_to_step(step, left2) {
+  if (step instanceof Cont) {
+    let can_backtrack = step[0];
+    let a = step[1];
+    let state = step[2];
+    return new Cont(can_backtrack, a, state);
+  } else {
+    let can_backtrack = step[0];
+    let right2 = step[1];
+    return new Fail(can_backtrack, new Append(left2, right2));
+  }
+}
+function one_of(parsers) {
+  return new Parser(
+    (state) => {
+      let init3 = new Fail(new CanBacktrack(false), new Empty2());
+      return fold_until(
+        parsers,
+        init3,
+        (result, next2) => {
+          if (result instanceof Cont) {
+            return new Stop(result);
+          } else if (result instanceof Fail && result[0] instanceof CanBacktrack && result[0][0]) {
+            return new Stop(result);
+          } else {
+            let bag = result[1];
+            let _pipe = runwrap(state, next2);
+            let _pipe$1 = add_bag_to_step(_pipe, bag);
+            return new Continue(_pipe$1);
+          }
+        }
+      );
+    }
+  );
+}
+function optional(parser) {
+  return one_of(
+    toList([
+      map5(parser, (var0) => {
+        return new Some(var0);
+      }),
+      return$(new None())
+    ])
+  );
+}
+
+// build/dev/javascript/kielet/kielet/plurals/ast.mjs
+var Equal = class extends CustomType {
+};
+var NotEqual = class extends CustomType {
+};
+var GreaterThan = class extends CustomType {
+};
+var GreaterThanOrEqual = class extends CustomType {
+};
+var LowerThan = class extends CustomType {
+};
+var LowerThanOrEqual = class extends CustomType {
+};
+var Remainder = class extends CustomType {
+};
+var And = class extends CustomType {
+};
+var Or = class extends CustomType {
+};
+var N = class extends CustomType {
+};
+var Integer = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var BinaryOperation = class extends CustomType {
+  constructor(operator, lvalue, rvalue) {
+    super();
+    this.operator = operator;
+    this.lvalue = lvalue;
+    this.rvalue = rvalue;
+  }
+};
+var If = class extends CustomType {
+  constructor(condition, truthy, falsy) {
+    super();
+    this.condition = condition;
+    this.truthy = truthy;
+    this.falsy = falsy;
+  }
+};
+var Paren = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+
+// build/dev/javascript/nibble/nibble/pratt.mjs
+var Config = class extends CustomType {
+  constructor(one_of2, and_then_one_of, spaces) {
+    super();
+    this.one_of = one_of2;
+    this.and_then_one_of = and_then_one_of;
+    this.spaces = spaces;
+  }
+};
+var Operator = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+function operation(expr, config, current_precedence) {
+  let _pipe = config.and_then_one_of;
+  let _pipe$1 = filter_map(
+    _pipe,
+    (operator) => {
+      let op = operator[0];
+      let $ = op(config);
+      if ($[0] > current_precedence) {
+        let precedence = $[0];
+        let parser = $[1];
+        return new Ok(parser(expr));
+      } else {
+        return new Error(void 0);
+      }
+    }
+  );
+  return one_of(_pipe$1);
+}
+function sub_expression(config, precedence) {
+  let expr = lazy(
+    () => {
+      let _pipe = config.one_of;
+      let _pipe$1 = map(_pipe, (p) => {
+        return p(config);
+      });
+      return one_of(_pipe$1);
+    }
+  );
+  let go = (expr2) => {
+    return do$(
+      config.spaces,
+      (_) => {
+        return one_of(
+          toList([
+            (() => {
+              let _pipe = operation(expr2, config, precedence);
+              return map5(
+                _pipe,
+                (var0) => {
+                  return new Continue3(var0);
+                }
+              );
+            })(),
+            (() => {
+              let _pipe = return$(expr2);
+              return map5(
+                _pipe,
+                (var0) => {
+                  return new Break(var0);
+                }
+              );
+            })()
+          ])
+        );
+      }
+    );
+  };
+  return do$(
+    config.spaces,
+    (_) => {
+      return do$(expr, (e) => {
+        return loop(e, go);
+      });
+    }
+  );
+}
+function expression(first3, then$3, spaces) {
+  let config = new Config(first3, then$3, spaces);
+  return sub_expression(config, 0);
+}
+function make_infix(precedence, operator, apply) {
+  let left_precedence = precedence[0];
+  let right_precedence = precedence[1];
+  return new Operator(
+    (config) => {
+      return [
+        left_precedence,
+        (lhs) => {
+          return do$(
+            operator,
+            (_) => {
+              return do$(
+                sub_expression(config, right_precedence),
+                (subexpr) => {
+                  return return$(apply(lhs, subexpr));
+                }
+              );
+            }
+          );
+        }
+      ];
+    }
+  );
+}
+function infix_left(precedence, operator, apply) {
+  return make_infix([precedence, precedence], operator, apply);
+}
+function infix_right(precedence, operator, apply) {
+  return make_infix([precedence, precedence - 1], operator, apply);
+}
+
+// build/dev/javascript/kielet/kielet/plurals/syntax_error.mjs
+var SyntaxError = class extends CustomType {
+  constructor(line, column, reason) {
+    super();
+    this.line = line;
+    this.column = column;
+    this.reason = reason;
+  }
+};
+
+// build/dev/javascript/kielet/kielet/plurals/tokenizer.mjs
+var N2 = class extends CustomType {
+};
+var NPlurals = class extends CustomType {
+};
+var Plural2 = class extends CustomType {
+};
+var Equals = class extends CustomType {
+};
+var NotEquals = class extends CustomType {
+};
+var GreaterThanOrEquals = class extends CustomType {
+};
+var LowerThanOrEquals = class extends CustomType {
+};
+var GreaterThan2 = class extends CustomType {
+};
+var LowerThan2 = class extends CustomType {
+};
+var Assignment = class extends CustomType {
+};
+var Ternary = class extends CustomType {
+};
+var TernaryElse = class extends CustomType {
+};
+var Remainder2 = class extends CustomType {
+};
+var Or2 = class extends CustomType {
+};
+var And2 = class extends CustomType {
+};
+var Semicolon = class extends CustomType {
+};
+var LParen = class extends CustomType {
+};
+var RParen = class extends CustomType {
+};
+var End = class extends CustomType {
+};
+var Int = class extends CustomType {
+  constructor(value2) {
+    super();
+    this.value = value2;
+  }
+};
+function to_nibble(token2, lexeme, line, col) {
+  return new Token(
+    new Span(line, col, line, col + length3(lexeme)),
+    lexeme,
+    token2
+  );
+}
+function read_digits(loop$str, loop$acc, loop$line, loop$col, loop$digit_acc) {
+  while (true) {
+    let str = loop$str;
+    let acc = loop$acc;
+    let line = loop$line;
+    let col = loop$col;
+    let digit_acc = loop$digit_acc;
+    if (str.atLeastLength(1) && (str.head === "0" || str.head === "1" || str.head === "2" || str.head === "3" || str.head === "4" || str.head === "5" || str.head === "6" || str.head === "7" || str.head === "8" || str.head === "9")) {
+      let digit = str.head;
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = acc;
+      loop$line = line;
+      loop$col = col + 1;
+      loop$digit_acc = digit_acc + digit;
+    } else {
+      let other = str;
+      let $ = parse(digit_acc);
+      if ($.isOk()) {
+        let int3 = $[0];
+        return do_tokenize(
+          other,
+          prepend(to_nibble(new Int(int3), digit_acc, line, col), acc),
+          line,
+          col + length3(digit_acc)
+        );
+      } else {
+        return new Error(
+          new SyntaxError(
+            line,
+            new Some(col),
+            "Unparseable integer " + digit_acc
+          )
+        );
+      }
+    }
+  }
+}
+function do_tokenize(loop$str, loop$acc, loop$line, loop$col) {
+  while (true) {
+    let str = loop$str;
+    let acc = loop$acc;
+    let line = loop$line;
+    let col = loop$col;
+    if (str.hasLength(0)) {
+      return new Ok(
+        reverse(prepend(to_nibble(new End(), "", line, col), acc))
+      );
+    } else if (str.atLeastLength(8) && str.head === "n" && str.tail.head === "p" && str.tail.tail.head === "l" && str.tail.tail.tail.head === "u" && str.tail.tail.tail.tail.head === "r" && str.tail.tail.tail.tail.tail.head === "a" && str.tail.tail.tail.tail.tail.tail.head === "l" && str.tail.tail.tail.tail.tail.tail.tail.head === "s") {
+      let rest = str.tail.tail.tail.tail.tail.tail.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(
+        to_nibble(new NPlurals(), "nplurals", line, col),
+        acc
+      );
+      loop$line = line;
+      loop$col = col + 8;
+    } else if (str.atLeastLength(6) && str.head === "p" && str.tail.head === "l" && str.tail.tail.head === "u" && str.tail.tail.tail.head === "r" && str.tail.tail.tail.tail.head === "a" && str.tail.tail.tail.tail.tail.head === "l") {
+      let rest = str.tail.tail.tail.tail.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new Plural2(), "plural", line, col), acc);
+      loop$line = line;
+      loop$col = col + 6;
+    } else if (str.atLeastLength(1) && str.head === "n") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new N2(), "n", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(2) && str.head === "\\" && str.tail.head === "\n") {
+      let rest = str.tail.tail;
+      loop$str = rest;
+      loop$acc = acc;
+      loop$line = line + 1;
+      loop$col = 1;
+    } else if (str.atLeastLength(1) && str.head === "\n") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = acc;
+      loop$line = line + 1;
+      loop$col = 1;
+    } else if (str.atLeastLength(1) && str.head === " ") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = acc;
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(2) && str.head === "=" && str.tail.head === "=") {
+      let rest = str.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new Equals(), "==", line, col), acc);
+      loop$line = line;
+      loop$col = col + 2;
+    } else if (str.atLeastLength(2) && str.head === "!" && str.tail.head === "=") {
+      let rest = str.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new NotEquals(), "!=", line, col), acc);
+      loop$line = line;
+      loop$col = col + 2;
+    } else if (str.atLeastLength(2) && str.head === ">" && str.tail.head === "=") {
+      let rest = str.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(
+        to_nibble(new GreaterThanOrEquals(), ">=", line, col),
+        acc
+      );
+      loop$line = line;
+      loop$col = col + 2;
+    } else if (str.atLeastLength(2) && str.head === "<" && str.tail.head === "=") {
+      let rest = str.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(
+        to_nibble(new LowerThanOrEquals(), "<=", line, col),
+        acc
+      );
+      loop$line = line;
+      loop$col = col + 2;
+    } else if (str.atLeastLength(1) && str.head === ">") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new GreaterThan2(), ">", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && str.head === "<") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new LowerThan2(), "<", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && str.head === "=") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new Assignment(), "=", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && str.head === "?") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new Ternary(), "?", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && str.head === ":") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new TernaryElse(), ":", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && str.head === "%") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new Remainder2(), "%", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(2) && str.head === "|" && str.tail.head === "|") {
+      let rest = str.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new Or2(), "||", line, col), acc);
+      loop$line = line;
+      loop$col = col + 2;
+    } else if (str.atLeastLength(2) && str.head === "&" && str.tail.head === "&") {
+      let rest = str.tail.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new And2(), "&&", line, col), acc);
+      loop$line = line;
+      loop$col = col + 2;
+    } else if (str.atLeastLength(1) && str.head === ";") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new Semicolon(), ";", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && str.head === ")") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new RParen(), ")", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && str.head === "(") {
+      let rest = str.tail;
+      loop$str = rest;
+      loop$acc = prepend(to_nibble(new LParen(), "(", line, col), acc);
+      loop$line = line;
+      loop$col = col + 1;
+    } else if (str.atLeastLength(1) && (str.head === "0" || str.head === "1" || str.head === "2" || str.head === "3" || str.head === "4" || str.head === "5" || str.head === "6" || str.head === "7" || str.head === "8" || str.head === "9")) {
+      let digit = str.head;
+      let rest = str.tail;
+      return read_digits(rest, acc, line, col + 1, digit);
+    } else {
+      let grapheme = str.head;
+      return new Error(
+        new SyntaxError(
+          line,
+          new Some(col),
+          "Unexpected grapheme " + grapheme
+        )
+      );
+    }
+  }
+}
+function tokenize(str) {
+  return do_tokenize(graphemes(str), toList([]), 1, 1);
+}
+
+// build/dev/javascript/kielet/kielet/plurals/parser.mjs
+function int_parser() {
+  return take_map(
+    "An integer",
+    (tok) => {
+      if (tok instanceof Int) {
+        let i = tok.value;
+        return new Some(new Integer(i));
+      } else {
+        return new None();
+      }
+    }
+  );
+}
+function n_parser() {
+  return take_map(
+    "n",
+    (tok) => {
+      if (tok instanceof N2) {
+        return new Some(new N());
+      } else {
+        return new None();
+      }
+    }
+  );
+}
+function lparen_parser() {
+  return take_map(
+    "Left parenthesis",
+    (tok) => {
+      if (tok instanceof LParen) {
+        return new Some(void 0);
+      } else {
+        return new None();
+      }
+    }
+  );
+}
+function rparen_parser() {
+  return take_map(
+    "Right parenthesis",
+    (tok) => {
+      if (tok instanceof RParen) {
+        return new Some(void 0);
+      } else {
+        return new None();
+      }
+    }
+  );
+}
+function paren_parser() {
+  return do$(
+    lparen_parser(),
+    (_) => {
+      return do$(
+        plurals_parser(),
+        (expr) => {
+          return do$(
+            rparen_parser(),
+            (_2) => {
+              return return$(new Paren(expr));
+            }
+          );
+        }
+      );
+    }
+  );
+}
+function plurals_parser() {
+  return do$(
+    expr_parser(),
+    (maybe_cond) => {
+      return one_of(
+        toList([rest_of_ternary_parser(maybe_cond), return$(maybe_cond)])
+      );
+    }
+  );
+}
+function expr_parser() {
+  return expression(
+    toList([
+      (_) => {
+        return int_parser();
+      },
+      (_) => {
+        return n_parser();
+      },
+      (_) => {
+        return paren_parser();
+      }
+    ]),
+    toList([
+      infix_left(
+        200,
+        token(new And2()),
+        (l, r) => {
+          return new BinaryOperation(new And(), l, r);
+        }
+      ),
+      infix_left(
+        200,
+        token(new Or2()),
+        (l, r) => {
+          return new BinaryOperation(new Or(), l, r);
+        }
+      ),
+      infix_left(
+        300,
+        token(new Equals()),
+        (l, r) => {
+          return new BinaryOperation(new Equal(), l, r);
+        }
+      ),
+      infix_left(
+        300,
+        token(new NotEquals()),
+        (l, r) => {
+          return new BinaryOperation(new NotEqual(), l, r);
+        }
+      ),
+      infix_left(
+        300,
+        token(new GreaterThan2()),
+        (l, r) => {
+          return new BinaryOperation(new GreaterThan(), l, r);
+        }
+      ),
+      infix_left(
+        300,
+        token(new LowerThan2()),
+        (l, r) => {
+          return new BinaryOperation(new LowerThan(), l, r);
+        }
+      ),
+      infix_left(
+        300,
+        token(new GreaterThanOrEquals()),
+        (l, r) => {
+          return new BinaryOperation(new GreaterThanOrEqual(), l, r);
+        }
+      ),
+      infix_left(
+        300,
+        token(new LowerThanOrEquals()),
+        (l, r) => {
+          return new BinaryOperation(new LowerThanOrEqual(), l, r);
+        }
+      ),
+      infix_right(
+        400,
+        token(new Remainder2()),
+        (l, r) => {
+          return new BinaryOperation(new Remainder(), l, r);
+        }
+      )
+    ]),
+    return$(void 0)
+  );
+}
+function main_parser() {
+  return do$(
+    token(new NPlurals()),
+    (_) => {
+      return do$(
+        token(new Assignment()),
+        (_2) => {
+          return do$(
+            int_parser(),
+            (nplurals) => {
+              return do$(
+                token(new Semicolon()),
+                (_3) => {
+                  return do$(
+                    token(new Plural2()),
+                    (_4) => {
+                      return do$(
+                        token(new Assignment()),
+                        (_5) => {
+                          return do$(
+                            plurals_parser(),
+                            (ast) => {
+                              return do$(
+                                optional(
+                                  token(new Semicolon())
+                                ),
+                                (_6) => {
+                                  return do$(
+                                    token(new End()),
+                                    (_7) => {
+                                      return do$(
+                                        eof(),
+                                        (_8) => {
+                                          if (!(nplurals instanceof Integer)) {
+                                            throw makeError(
+                                              "let_assert",
+                                              "kielet/plurals/parser",
+                                              29,
+                                              "",
+                                              "Pattern match failed, no pattern matched the value.",
+                                              { value: nplurals }
+                                            );
+                                          }
+                                          let nplurals$1 = nplurals[0];
+                                          return return$(
+                                            [nplurals$1, ast]
+                                          );
+                                        }
+                                      );
+                                    }
+                                  );
+                                }
+                              );
+                            }
+                          );
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+}
+function parse4(input) {
+  return run(input, main_parser());
+}
+function rest_of_ternary_parser(cond) {
+  return do$(
+    token(new Ternary()),
+    (_) => {
+      return do$(
+        plurals_parser(),
+        (if_true) => {
+          return do$(
+            token(new TernaryElse()),
+            (_2) => {
+              return do$(
+                plurals_parser(),
+                (if_false) => {
+                  return return$(new If(cond, if_true, if_false));
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+}
+
+// build/dev/javascript/kielet/kielet/plurals.mjs
+var TokenizerError = class extends CustomType {
+  constructor(err) {
+    super();
+    this.err = err;
+  }
+};
+var ParserError = class extends CustomType {
+  constructor(err) {
+    super();
+    this.err = err;
+  }
+};
+var ParsingFailed = class extends CustomType {
+  constructor(err) {
+    super();
+    this.err = err;
+  }
+};
+var NoPluralFormsHeader = class extends CustomType {
+};
+var Plurals = class extends CustomType {
+  constructor(total, algorithm) {
+    super();
+    this.total = total;
+    this.algorithm = algorithm;
+  }
+};
+function parse5(input) {
+  return try$(
+    (() => {
+      let _pipe = tokenize(input);
+      return map_error(
+        _pipe,
+        (var0) => {
+          return new TokenizerError(var0);
+        }
+      );
+    })(),
+    (tokens) => {
+      return try$(
+        (() => {
+          let _pipe = parse4(tokens);
+          return map_error(
+            _pipe,
+            (var0) => {
+              return new ParserError(var0);
+            }
+          );
+        })(),
+        (_use0) => {
+          let total = _use0[0];
+          let ast = _use0[1];
+          return new Ok(new Plurals(total, ast));
+        }
+      );
+    }
+  );
+}
+var plural_forms_header = "Plural-Forms";
+function load_from_mo(mo) {
+  return try$(
+    (() => {
+      let _pipe = get(mo.metadata, plural_forms_header);
+      return replace_error(_pipe, new NoPluralFormsHeader());
+    })(),
+    (plural_header) => {
+      let _pipe = parse5(plural_header);
+      return map_error(
+        _pipe,
+        (var0) => {
+          return new ParsingFailed(var0);
+        }
+      );
+    }
+  );
+}
+
+// build/dev/javascript/kielet/kielet/language.mjs
+var MoParseError = class extends CustomType {
+  constructor(err) {
+    super();
+    this.err = err;
+  }
+};
+var PluralFormsLoadError = class extends CustomType {
+  constructor(err) {
+    super();
+    this.err = err;
+  }
+};
+var MsgIsPlural = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var MsgNotFound = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var Language = class extends CustomType {
+  constructor(code, translations, plurals) {
+    super();
+    this.code = code;
+    this.translations = translations;
+    this.plurals = plurals;
+  }
+};
+function load(code, mo_file) {
+  return try$(
+    (() => {
+      let _pipe = parse2(mo_file);
+      return map_error(
+        _pipe,
+        (var0) => {
+          return new MoParseError(var0);
+        }
+      );
+    })(),
+    (mo) => {
+      let $ = load_from_mo(mo);
+      if ($.isOk()) {
+        let p = $[0];
+        return new Ok(new Language(code, mo.translations, new Some(p)));
+      } else if (!$.isOk() && $[0] instanceof NoPluralFormsHeader) {
+        return new Ok(new Language(code, mo.translations, new None()));
+      } else {
+        let err = $[0];
+        return new Error(new PluralFormsLoadError(err));
+      }
+    }
+  );
+}
+function get_code(lang) {
+  return lang.code;
+}
+function form_key(context, msgid) {
+  if (context instanceof Some) {
+    let context$1 = context[0];
+    return new WithContext(context$1, msgid);
+  } else {
+    return new NoContext(msgid);
+  }
+}
+function get_singular_translation(lang, context, msgid) {
+  let $ = get(lang.translations, form_key(context, msgid));
+  if ($.isOk()) {
+    let mostring = $[0];
+    if (mostring instanceof Singular) {
+      let content = mostring.content;
+      return new Ok(content);
+    } else {
+      return new Error(new MsgIsPlural(msgid));
+    }
+  } else {
+    return new Error(new MsgNotFound(msgid));
+  }
+}
+
+// build/dev/javascript/kielet/kielet/database.mjs
+var Database = class extends CustomType {
+  constructor(languages) {
+    super();
+    this.languages = languages;
+  }
+};
+function new$3() {
+  return new Database(new$());
+}
+function add_language(db, lang) {
+  return new Database(
+    insert(db.languages, get_code(lang), lang)
+  );
+}
+function translate_singular(db, context, msgid, language_code) {
+  let $ = get(db.languages, language_code);
+  if ($.isOk()) {
+    let lang = $[0];
+    let $1 = get_singular_translation(lang, context, msgid);
+    if ($1.isOk()) {
+      let translation = $1[0];
+      return translation;
+    } else {
+      return msgid;
+    }
+  } else {
+    return msgid;
+  }
+}
+
+// build/dev/javascript/kielet/kielet/context.mjs
+var Context = class extends CustomType {
+  constructor(database, language) {
+    super();
+    this.database = database;
+    this.language = language;
+  }
+};
 
 // build/dev/javascript/lustre/lustre/effect.mjs
 var Effect = class extends CustomType {
@@ -2323,7 +4487,7 @@ function attribute(name, value2) {
 function on(name, handler) {
   return new Event2("on" + name, handler);
 }
-function map4(attr, f) {
+function map6(attr, f) {
   if (attr instanceof Attribute) {
     let name$1 = attr[0];
     let value$1 = attr[1];
@@ -2387,14 +4551,14 @@ function element(tag, attrs, children2) {
 function text(content) {
   return new Text(content);
 }
-function map5(element2, f) {
+function map7(element2, f) {
   if (element2 instanceof Text) {
     let content = element2.content;
     return new Text(content);
   } else if (element2 instanceof Map2) {
     let subtree = element2.subtree;
     return new Map2(() => {
-      return map5(subtree(), f);
+      return map7(subtree(), f);
     });
   } else if (element2 instanceof Element) {
     let key2 = element2.key;
@@ -2413,11 +4577,11 @@ function map5(element2, f) {
           map(
             attrs,
             (_capture) => {
-              return map4(_capture, f);
+              return map6(_capture, f);
             }
           ),
           map(children2, (_capture) => {
-            return map5(_capture, f);
+            return map7(_capture, f);
           }),
           self_closing,
           void$
@@ -2431,24 +4595,13 @@ function map5(element2, f) {
       () => {
         return new Fragment(
           map(elements2, (_capture) => {
-            return map5(_capture, f);
+            return map7(_capture, f);
           }),
           key2
         );
       }
     );
   }
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/set.mjs
-var Set2 = class extends CustomType {
-  constructor(dict) {
-    super();
-    this.dict = dict;
-  }
-};
-function new$3() {
-  return new Set2(new$());
 }
 
 // build/dev/javascript/lustre/lustre/internals/patch.mjs
@@ -2475,7 +4628,7 @@ var Init = class extends CustomType {
 function is_empty_element_diff(diff2) {
   return isEqual(diff2.created, new$()) && isEqual(
     diff2.removed,
-    new$3()
+    new$2()
   ) && isEqual(diff2.updated, new$());
 }
 
@@ -2542,31 +4695,31 @@ var ForceModel = class extends CustomType {
 };
 
 // build/dev/javascript/lustre/vdom.ffi.mjs
-function morph(prev, next, dispatch) {
+function morph(prev, next2, dispatch) {
   let out;
-  let stack = [{ prev, next, parent: prev.parentNode }];
+  let stack = [{ prev, next: next2, parent: prev.parentNode }];
   while (stack.length) {
-    let { prev: prev2, next: next2, parent } = stack.pop();
-    while (next2.subtree !== void 0)
-      next2 = next2.subtree();
-    if (next2.content !== void 0) {
+    let { prev: prev2, next: next3, parent } = stack.pop();
+    while (next3.subtree !== void 0)
+      next3 = next3.subtree();
+    if (next3.content !== void 0) {
       if (!prev2) {
-        const created = document.createTextNode(next2.content);
+        const created = document.createTextNode(next3.content);
         parent.appendChild(created);
         out ??= created;
       } else if (prev2.nodeType === Node.TEXT_NODE) {
-        if (prev2.textContent !== next2.content)
-          prev2.textContent = next2.content;
+        if (prev2.textContent !== next3.content)
+          prev2.textContent = next3.content;
         out ??= prev2;
       } else {
-        const created = document.createTextNode(next2.content);
+        const created = document.createTextNode(next3.content);
         parent.replaceChild(created, prev2);
         out ??= created;
       }
-    } else if (next2.tag !== void 0) {
+    } else if (next3.tag !== void 0) {
       const created = createElementNode({
         prev: prev2,
-        next: next2,
+        next: next3,
         dispatch,
         stack
       });
@@ -2576,8 +4729,8 @@ function morph(prev, next, dispatch) {
         parent.replaceChild(created, prev2);
       }
       out ??= created;
-    } else if (next2.elements !== void 0) {
-      for (const fragmentElement of forceChild(next2)) {
+    } else if (next3.elements !== void 0) {
+      for (const fragmentElement of forceChild(next3)) {
         stack.unshift({ prev: prev2, next: fragmentElement, parent });
         prev2 = prev2?.nextSibling;
       }
@@ -2585,10 +4738,10 @@ function morph(prev, next, dispatch) {
   }
   return out;
 }
-function createElementNode({ prev, next, dispatch, stack }) {
-  const namespace = next.namespace || "http://www.w3.org/1999/xhtml";
-  const canMorph = prev && prev.nodeType === Node.ELEMENT_NODE && prev.localName === next.tag && prev.namespaceURI === (next.namespace || "http://www.w3.org/1999/xhtml");
-  const el = canMorph ? prev : namespace ? document.createElementNS(namespace, next.tag) : document.createElement(next.tag);
+function createElementNode({ prev, next: next2, dispatch, stack }) {
+  const namespace = next2.namespace || "http://www.w3.org/1999/xhtml";
+  const canMorph = prev && prev.nodeType === Node.ELEMENT_NODE && prev.localName === next2.tag && prev.namespaceURI === (next2.namespace || "http://www.w3.org/1999/xhtml");
+  const el = canMorph ? prev : namespace ? document.createElementNS(namespace, next2.tag) : document.createElement(next2.tag);
   let handlersForEl;
   if (!registeredHandlers.has(el)) {
     const emptyHandlers = /* @__PURE__ */ new Map();
@@ -2602,13 +4755,13 @@ function createElementNode({ prev, next, dispatch, stack }) {
   let className = null;
   let style = null;
   let innerHTML = null;
-  if (canMorph && next.tag === "textarea") {
-    const innertText = next.children[Symbol.iterator]().next().value?.content;
+  if (canMorph && next2.tag === "textarea") {
+    const innertText = next2.children[Symbol.iterator]().next().value?.content;
     if (innertText !== void 0)
       el.value = innertText;
   }
   const delegated = [];
-  for (const attr of next.attrs) {
+  for (const attr of next2.attrs) {
     const name = attr[0];
     const value2 = attr[1];
     if (attr.as_property) {
@@ -2670,7 +4823,7 @@ function createElementNode({ prev, next, dispatch, stack }) {
       el.removeEventListener(eventName, lustreGenericEventHandler);
     }
   }
-  if (next.tag === "slot") {
+  if (next2.tag === "slot") {
     window.queueMicrotask(() => {
       for (const child of el.assignedElements()) {
         for (const [name, value2] of delegated) {
@@ -2681,8 +4834,8 @@ function createElementNode({ prev, next, dispatch, stack }) {
       }
     });
   }
-  if (next.key !== void 0 && next.key !== "") {
-    el.setAttribute("data-lustre-key", next.key);
+  if (next2.key !== void 0 && next2.key !== "") {
+    el.setAttribute("data-lustre-key", next2.key);
   } else if (innerHTML !== null) {
     el.innerHTML = innerHTML;
     return el;
@@ -2691,14 +4844,14 @@ function createElementNode({ prev, next, dispatch, stack }) {
   let seenKeys = null;
   let keyedChildren = null;
   let incomingKeyedChildren = null;
-  let firstChild = children(next).next().value;
+  let firstChild = children(next2).next().value;
   if (canMorph && firstChild !== void 0 && // Explicit checks are more verbose but truthy checks force a bunch of comparisons
   // we don't care about: it's never gonna be a number etc.
   firstChild.key !== void 0 && firstChild.key !== "") {
     seenKeys = /* @__PURE__ */ new Set();
     keyedChildren = getKeyedChildren(prev);
-    incomingKeyedChildren = getKeyedChildren(next);
-    for (const child of children(next)) {
+    incomingKeyedChildren = getKeyedChildren(next2);
+    for (const child of children(next2)) {
       prevChild = diffKeyedChild(
         prevChild,
         child,
@@ -2710,15 +4863,15 @@ function createElementNode({ prev, next, dispatch, stack }) {
       );
     }
   } else {
-    for (const child of children(next)) {
+    for (const child of children(next2)) {
       stack.unshift({ prev: prevChild, next: child, parent: el });
       prevChild = prevChild?.nextSibling;
     }
   }
   while (prevChild) {
-    const next2 = prevChild.nextSibling;
+    const next3 = prevChild.nextSibling;
     el.removeChild(prevChild);
-    prevChild = next2;
+    prevChild = next3;
   }
   return el;
 }
@@ -2751,14 +4904,14 @@ function lustreServerEventHandler(event2) {
     tag,
     data: include.reduce(
       (data2, property) => {
-        const path = property.split(".");
-        for (let i = 0, o = data2, e = event2; i < path.length; i++) {
-          if (i === path.length - 1) {
-            o[path[i]] = e[path[i]];
+        const path2 = property.split(".");
+        for (let i = 0, o = data2, e = event2; i < path2.length; i++) {
+          if (i === path2.length - 1) {
+            o[path2[i]] = e[path2[i]];
           } else {
-            o[path[i]] ??= {};
-            e = e[path[i]];
-            o = o[path[i]];
+            o[path2[i]] ??= {};
+            e = e[path2[i]];
+            o = o[path2[i]];
           }
         }
         return data2;
@@ -2957,10 +5110,10 @@ var LustreClientApplication = class _LustreClientApplication {
   #flush(effects = [], didUpdate = false) {
     while (this.#queue.length > 0) {
       const msg = this.#queue.shift();
-      const [next, effect] = this.#update(this.#model, msg);
-      didUpdate ||= this.#model !== next;
+      const [next2, effect] = this.#update(this.#model, msg);
+      didUpdate ||= this.#model !== next2;
       effects = effects.concat(effect.all.toArray());
-      this.#model = next;
+      this.#model = next2;
     }
     while (effects.length > 0) {
       const effect = effects.shift();
@@ -3071,10 +5224,10 @@ var LustreServerApplication = class _LustreServerApplication {
   #flush(didUpdate = false, effects = []) {
     while (this.#queue.length > 0) {
       const msg = this.#queue.shift();
-      const [next, effect] = this.#update(this.#model, msg);
-      didUpdate ||= this.#model !== next;
+      const [next2, effect] = this.#update(this.#model, msg);
+      didUpdate ||= this.#model !== next2;
       effects = effects.concat(effect.all.toArray());
-      this.#model = next;
+      this.#model = next2;
     }
     while (effects.length > 0) {
       const effect = effects.shift();
@@ -3157,6 +5310,248 @@ function textarea(attrs, content) {
   return element("textarea", attrs, toList([text(content)]));
 }
 
+// build/dev/javascript/simplifile/simplifile_js.mjs
+import fs from "node:fs";
+import path from "node:path";
+import process2 from "node:process";
+function readBits(filepath) {
+  return gleamResult(() => {
+    const contents = fs.readFileSync(path.normalize(filepath));
+    return new BitArray(new Uint8Array(contents));
+  });
+}
+function gleamResult(op) {
+  try {
+    const val = op();
+    return new Ok(val);
+  } catch (e) {
+    return new Error(cast_error(e.code));
+  }
+}
+function cast_error(error_code) {
+  switch (error_code) {
+    case "EACCES":
+      return new Eacces();
+    case "EAGAIN":
+      return new Eagain();
+    case "EBADF":
+      return new Ebadf();
+    case "EBADMSG":
+      return new Ebadmsg();
+    case "EBUSY":
+      return new Ebusy();
+    case "EDEADLK":
+      return new Edeadlk();
+    case "EDEADLOCK":
+      return new Edeadlock();
+    case "EDQUOT":
+      return new Edquot();
+    case "EEXIST":
+      return new Eexist();
+    case "EFAULT":
+      return new Efault();
+    case "EFBIG":
+      return new Efbig();
+    case "EFTYPE":
+      return new Eftype();
+    case "EINTR":
+      return new Eintr();
+    case "EINVAL":
+      return new Einval();
+    case "EIO":
+      return new Eio();
+    case "EISDIR":
+      return new Eisdir();
+    case "ELOOP":
+      return new Eloop();
+    case "EMFILE":
+      return new Emfile();
+    case "EMLINK":
+      return new Emlink();
+    case "EMULTIHOP":
+      return new Emultihop();
+    case "ENAMETOOLONG":
+      return new Enametoolong();
+    case "ENFILE":
+      return new Enfile();
+    case "ENOBUFS":
+      return new Enobufs();
+    case "ENODEV":
+      return new Enodev();
+    case "ENOLCK":
+      return new Enolck();
+    case "ENOLINK":
+      return new Enolink();
+    case "ENOENT":
+      return new Enoent();
+    case "ENOMEM":
+      return new Enomem();
+    case "ENOSPC":
+      return new Enospc();
+    case "ENOSR":
+      return new Enosr();
+    case "ENOSTR":
+      return new Enostr();
+    case "ENOSYS":
+      return new Enosys();
+    case "ENOBLK":
+      return new Enotblk();
+    case "ENODIR":
+      return new Enotdir();
+    case "ENOTSUP":
+      return new Enotsup();
+    case "ENXIO":
+      return new Enxio();
+    case "EOPNOTSUPP":
+      return new Eopnotsupp();
+    case "EOVERFLOW":
+      return new Eoverflow();
+    case "EPERM":
+      return new Eperm();
+    case "EPIPE":
+      return new Epipe();
+    case "ERANGE":
+      return new Erange();
+    case "EROFS":
+      return new Erofs();
+    case "ESPIPE":
+      return new Espipe();
+    case "ESRCH":
+      return new Esrch();
+    case "ESTALE":
+      return new Estale();
+    case "ETXTBSY":
+      return new Etxtbsy();
+    case "EXDEV":
+      return new Exdev();
+    case "NOTUTF8":
+      return new NotUtf8();
+    default:
+      return new Unknown(error_code);
+  }
+}
+
+// build/dev/javascript/simplifile/simplifile.mjs
+var Eacces = class extends CustomType {
+};
+var Eagain = class extends CustomType {
+};
+var Ebadf = class extends CustomType {
+};
+var Ebadmsg = class extends CustomType {
+};
+var Ebusy = class extends CustomType {
+};
+var Edeadlk = class extends CustomType {
+};
+var Edeadlock = class extends CustomType {
+};
+var Edquot = class extends CustomType {
+};
+var Eexist = class extends CustomType {
+};
+var Efault = class extends CustomType {
+};
+var Efbig = class extends CustomType {
+};
+var Eftype = class extends CustomType {
+};
+var Eintr = class extends CustomType {
+};
+var Einval = class extends CustomType {
+};
+var Eio = class extends CustomType {
+};
+var Eisdir = class extends CustomType {
+};
+var Eloop = class extends CustomType {
+};
+var Emfile = class extends CustomType {
+};
+var Emlink = class extends CustomType {
+};
+var Emultihop = class extends CustomType {
+};
+var Enametoolong = class extends CustomType {
+};
+var Enfile = class extends CustomType {
+};
+var Enobufs = class extends CustomType {
+};
+var Enodev = class extends CustomType {
+};
+var Enolck = class extends CustomType {
+};
+var Enolink = class extends CustomType {
+};
+var Enoent = class extends CustomType {
+};
+var Enomem = class extends CustomType {
+};
+var Enospc = class extends CustomType {
+};
+var Enosr = class extends CustomType {
+};
+var Enostr = class extends CustomType {
+};
+var Enosys = class extends CustomType {
+};
+var Enotblk = class extends CustomType {
+};
+var Enotdir = class extends CustomType {
+};
+var Enotsup = class extends CustomType {
+};
+var Enxio = class extends CustomType {
+};
+var Eopnotsupp = class extends CustomType {
+};
+var Eoverflow = class extends CustomType {
+};
+var Eperm = class extends CustomType {
+};
+var Epipe = class extends CustomType {
+};
+var Erange = class extends CustomType {
+};
+var Erofs = class extends CustomType {
+};
+var Espipe = class extends CustomType {
+};
+var Esrch = class extends CustomType {
+};
+var Estale = class extends CustomType {
+};
+var Etxtbsy = class extends CustomType {
+};
+var Exdev = class extends CustomType {
+};
+var NotUtf8 = class extends CustomType {
+};
+var Unknown = class extends CustomType {
+  constructor(inner) {
+    super();
+    this.inner = inner;
+  }
+};
+
+// build/dev/javascript/app/storage/constants.mjs
+var left = "left-list";
+var right = "right-list";
+var only_left = "only-left-list";
+var only_right = "only-right-list";
+var contain_both = "contain-both-list";
+
+// build/dev/javascript/kielet/kielet.mjs
+function gettext(context, msgid) {
+  return translate_singular(
+    context.database,
+    new None(),
+    msgid,
+    context.language
+  );
+}
+
 // build/dev/javascript/lustre/lustre/event.mjs
 function on2(name, handler) {
   return on(name, handler);
@@ -3182,13 +5577,6 @@ function on_input(msg) {
   );
 }
 
-// build/dev/javascript/app/storage/constants.mjs
-var left = "left-list";
-var right = "right-list";
-var only_left = "only-left-list";
-var only_right = "only-right-list";
-var contain_both = "contain-both-list";
-
 // build/dev/javascript/app/views/compare_button.mjs
 var UserCompareListContents = class extends CustomType {
 };
@@ -3199,7 +5587,7 @@ function update(model, msg) {
       throw makeError(
         "let_assert",
         "views/compare_button",
-        16,
+        18,
         "update",
         "Pattern match failed, no pattern matched the value.",
         { value: $ }
@@ -3211,7 +5599,7 @@ function update(model, msg) {
       throw makeError(
         "let_assert",
         "views/compare_button",
-        17,
+        19,
         "update",
         "Pattern match failed, no pattern matched the value.",
         { value: $1 }
@@ -3254,7 +5642,7 @@ function update(model, msg) {
     );
   }
 }
-function view() {
+function view(ctx) {
   let style = "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300";
   return button(
     toList([
@@ -3262,7 +5650,7 @@ function view() {
       class$(style),
       on_click(new UserCompareListContents())
     ]),
-    toList([text("Comparar")])
+    toList([text(gettext(ctx, "Compare"))])
   );
 }
 
@@ -3521,7 +5909,7 @@ async function import_(string4) {
 function text_to_lines(value2) {
   let lines = split3(value2, "\n");
   let line_breaks = (() => {
-    let _pipe2 = range(0, length(lines) - 1);
+    let _pipe2 = range2(0, length(lines) - 1);
     let _pipe$1 = filter2(_pipe2, (x) => {
       return x > 0;
     });
@@ -3618,7 +6006,7 @@ function update3(model, msg) {
     );
   } else if (msg instanceof UserTrimListSpaces) {
     let name = msg[0];
-    let trim2 = (x) => {
+    let trim3 = (x) => {
       if (x instanceof Some) {
         let current_list = x[0];
         return filter(
@@ -3631,7 +6019,7 @@ function update3(model, msg) {
         return toList([]);
       }
     };
-    return upsert(model, name, trim2);
+    return upsert(model, name, trim3);
   } else if (msg instanceof UserSortList) {
     let name = msg[0];
     let sort2 = (x) => {
@@ -3748,6 +6136,13 @@ function text_area(name, content) {
 }
 
 // build/dev/javascript/app/app.mjs
+var Model2 = class extends CustomType {
+  constructor(lists, ctx) {
+    super();
+    this.lists = lists;
+    this.ctx = ctx;
+  }
+};
 var TextViewMsg = class extends CustomType {
   constructor(x0) {
     super();
@@ -3767,83 +6162,115 @@ var CompareViewMsg = class extends CustomType {
   }
 };
 function init2(_) {
-  return from_list(
-    toList([
-      [left, toList([])],
-      [right, toList([])],
-      [only_left, toList([])],
-      [only_right, toList([])],
-      [contain_both, toList([])]
-    ])
+  let $ = readBits("./translations/pt-br.mo");
+  if (!$.isOk()) {
+    throw makeError(
+      "let_assert",
+      "app",
+      32,
+      "init",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $ }
+    );
+  }
+  let mo_data = $[0];
+  let $1 = load("pt_BR", mo_data);
+  if (!$1.isOk()) {
+    throw makeError(
+      "let_assert",
+      "app",
+      33,
+      "init",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $1 }
+    );
+  }
+  let portuguese = $1[0];
+  let db = (() => {
+    let _pipe = new$3();
+    return add_language(_pipe, portuguese);
+  })();
+  let ctx = new Context(db, "pt_BR");
+  return new Model2(
+    from_list(
+      toList([
+        [left, toList([])],
+        [right, toList([])],
+        [only_left, toList([])],
+        [only_right, toList([])],
+        [contain_both, toList([])]
+      ])
+    ),
+    ctx
   );
 }
 function update4(model, msg) {
   if (msg instanceof TextViewMsg) {
     let msg$1 = msg[0];
-    return update3(model, msg$1);
+    return model.withFields({ lists: update3(model.lists, msg$1) });
   } else if (msg instanceof SwitchViewMsg) {
     let msg$1 = msg[0];
-    return update2(model, msg$1);
+    return model.withFields({ lists: update2(model.lists, msg$1) });
   } else {
     let msg$1 = msg[0];
-    return update(model, msg$1);
+    return model.withFields({ lists: update(model.lists, msg$1) });
   }
 }
 function view3(model) {
-  let $ = get(model, left);
+  let $ = get(model.lists, left);
   if (!$.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      47,
+      62,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
     );
   }
   let left_list = $[0];
-  let $1 = get(model, right);
+  let $1 = get(model.lists, right);
   if (!$1.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      48,
+      63,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $1 }
     );
   }
   let right_list = $1[0];
-  let $2 = get(model, only_left);
+  let $2 = get(model.lists, only_left);
   if (!$2.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      50,
+      65,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $2 }
     );
   }
   let only_left_list = $2[0];
-  let $3 = get(model, only_right);
+  let $3 = get(model.lists, only_right);
   if (!$3.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      51,
+      66,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $3 }
     );
   }
   let only_right_list = $3[0];
-  let $4 = get(model, contain_both);
+  let $4 = get(model.lists, contain_both);
   if (!$4.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      53,
+      68,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $4 }
@@ -3858,19 +6285,19 @@ function view3(model) {
       div(
         toList([id("view-lists"), class$(view_list_style)]),
         toList([
-          map5(
+          map7(
             text_area(left, left_list),
             (a) => {
               return new TextViewMsg(a);
             }
           ),
-          map5(
+          map7(
             view2(),
             (a) => {
               return new SwitchViewMsg(a);
             }
           ),
-          map5(
+          map7(
             text_area(right, right_list),
             (a) => {
               return new TextViewMsg(a);
@@ -3878,8 +6305,8 @@ function view3(model) {
           )
         ])
       ),
-      map5(
-        view(),
+      map7(
+        view(model.ctx),
         (a) => {
           return new CompareViewMsg(a);
         }
@@ -3890,13 +6317,13 @@ function view3(model) {
           class$(view_list_style)
         ]),
         toList([
-          map5(
+          map7(
             text_area(only_left, only_left_list),
             (a) => {
               return new TextViewMsg(a);
             }
           ),
-          map5(
+          map7(
             text_area(only_right, only_right_list),
             (a) => {
               return new TextViewMsg(a);
@@ -3910,7 +6337,7 @@ function view3(model) {
           class$(view_list_style)
         ]),
         toList([
-          map5(
+          map7(
             text_area(contain_both, both_list),
             (a) => {
               return new TextViewMsg(a);
@@ -3928,7 +6355,7 @@ function main() {
     throw makeError(
       "let_assert",
       "app",
-      15,
+      17,
       "main",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }

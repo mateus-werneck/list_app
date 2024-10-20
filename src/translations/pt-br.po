@@ -1,0 +1,3 @@
+#: views/compare_button.gleam
+msgid "Compare"
+msgstr "Comparar"

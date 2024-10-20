@@ -1,5 +1,7 @@
 import gleam/dict
 import gleam/list
+import kielet.{gettext as g_}
+import kielet/context.{Context}
 import lustre/attribute
 import lustre/element
 import lustre/element/html
@@ -40,7 +42,7 @@ pub fn update(model: dict.Dict(String, List(string)), msg: CompareListMsg) {
   }
 }
 
-pub fn view() {
+pub fn view(ctx) {
   let style =
     "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent"
     <> " hover:text-white hover:bg-indigo-600 transition delay-75 duration-300"
@@ -51,6 +53,6 @@ pub fn view() {
       attribute.class(style),
       event.on_click(UserCompareListContents),
     ],
-    [element.text("Comparar")],
+    [element.text(g_(ctx, "Compare"))],
   )
 }
