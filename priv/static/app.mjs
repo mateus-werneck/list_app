@@ -130,12 +130,12 @@ function byteArrayToInt(byteArray, start3, end, isBigEndian, isSigned) {
   return value2;
 }
 function byteArrayToFloat(byteArray, start3, end, isBigEndian) {
-  const view3 = new DataView(byteArray.buffer);
+  const view4 = new DataView(byteArray.buffer);
   const byteSize = end - start3;
   if (byteSize === 8) {
-    return view3.getFloat64(start3, !isBigEndian);
+    return view4.getFloat64(start3, !isBigEndian);
   } else if (byteSize === 4) {
-    return view3.getFloat32(start3, !isBigEndian);
+    return view4.getFloat32(start3, !isBigEndian);
   } else {
     const msg = `Sized floats must be 32-bit or 64-bit on JavaScript, got size of ${byteSize * 8} bits`;
     throw new globalThis.Error(msg);
@@ -2846,13 +2846,13 @@ var LustreClientApplication = class _LustreClientApplication {
    *
    * @returns {Gleam.Ok<(action: Lustre.Action<Lustre.Client, Msg>>) => void>}
    */
-  static start({ init: init3, update: update4, view: view3 }, selector, flags) {
+  static start({ init: init3, update: update5, view: view4 }, selector, flags) {
     if (!is_browser())
       return new Error(new NotABrowser());
     const root = selector instanceof HTMLElement ? selector : document.querySelector(selector);
     if (!root)
       return new Error(new ElementNotFound(selector));
-    const app = new _LustreClientApplication(root, init3(flags), update4, view3);
+    const app = new _LustreClientApplication(root, init3(flags), update5, view4);
     return new Ok((action) => app.send(action));
   }
   /**
@@ -2863,11 +2863,11 @@ var LustreClientApplication = class _LustreClientApplication {
    *
    * @returns {LustreClientApplication}
    */
-  constructor(root, [init3, effects], update4, view3) {
+  constructor(root, [init3, effects], update5, view4) {
     this.root = root;
     this.#model = init3;
-    this.#update = update4;
-    this.#view = view3;
+    this.#update = update5;
+    this.#view = view4;
     this.#tickScheduled = window.requestAnimationFrame(
       () => this.#tick(effects.all.toArray(), true)
     );
@@ -2985,20 +2985,20 @@ var LustreClientApplication = class _LustreClientApplication {
 };
 var start = LustreClientApplication.start;
 var LustreServerApplication = class _LustreServerApplication {
-  static start({ init: init3, update: update4, view: view3, on_attribute_change }, flags) {
+  static start({ init: init3, update: update5, view: view4, on_attribute_change }, flags) {
     const app = new _LustreServerApplication(
       init3(flags),
-      update4,
-      view3,
+      update5,
+      view4,
       on_attribute_change
     );
     return new Ok((action) => app.send(action));
   }
-  constructor([model, effects], update4, view3, on_attribute_change) {
+  constructor([model, effects], update5, view4, on_attribute_change) {
     this.#model = model;
-    this.#update = update4;
-    this.#view = view3;
-    this.#html = view3(model);
+    this.#update = update5;
+    this.#view = view4;
+    this.#html = view4(model);
     this.#onAttributeChange = on_attribute_change;
     this.#renderers = /* @__PURE__ */ new Map();
     this.#handlers = handlers(this.#html);
@@ -3102,11 +3102,11 @@ var is_browser = () => globalThis.window && window.document;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init3, update4, view3, on_attribute_change) {
+  constructor(init3, update5, view4, on_attribute_change) {
     super();
     this.init = init3;
-    this.update = update4;
-    this.view = view3;
+    this.update = update5;
+    this.view = view4;
     this.on_attribute_change = on_attribute_change;
   }
 };
@@ -3118,17 +3118,17 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function application(init3, update4, view3) {
-  return new App(init3, update4, view3, new None());
+function application(init3, update5, view4) {
+  return new App(init3, update5, view4, new None());
 }
-function simple(init3, update4, view3) {
+function simple(init3, update5, view4) {
   let init$1 = (flags) => {
     return [init3(flags), none()];
   };
   let update$1 = (model, msg) => {
-    return [update4(model, msg), none()];
+    return [update5(model, msg), none()];
   };
-  return application(init$1, update$1, view3);
+  return application(init$1, update$1, view4);
 }
 function start2(app, selector, flags) {
   return guard(
@@ -3189,10 +3189,87 @@ var only_left = "only-left-list";
 var only_right = "only-right-list";
 var contain_both = "contain-both-list";
 
+// build/dev/javascript/app/views/compare_button.mjs
+var UserCompareListContents = class extends CustomType {
+};
+function update(model, msg) {
+  {
+    let $ = get(model, left);
+    if (!$.isOk()) {
+      throw makeError(
+        "let_assert",
+        "views/compare_button",
+        16,
+        "update",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $ }
+      );
+    }
+    let left_list = $[0];
+    let $1 = get(model, right);
+    if (!$1.isOk()) {
+      throw makeError(
+        "let_assert",
+        "views/compare_button",
+        17,
+        "update",
+        "Pattern match failed, no pattern matched the value.",
+        { value: $1 }
+      );
+    }
+    let right_list = $1[0];
+    let only_left_list = filter(
+      left_list,
+      (x) => {
+        return !contains(right_list, x);
+      }
+    );
+    let only_right_list = filter(
+      right_list,
+      (x) => {
+        return !contains(left_list, x);
+      }
+    );
+    let both_list = (() => {
+      let _pipe = concat(toList([left_list, right_list]));
+      let _pipe$1 = filter(
+        _pipe,
+        (x) => {
+          return !contains(only_left_list, x) && !contains(
+            only_right_list,
+            x
+          );
+        }
+      );
+      return unique(_pipe$1);
+    })();
+    return from_list(
+      toList([
+        [left, left_list],
+        [right, right_list],
+        [only_left, only_left_list],
+        [only_right, only_right_list],
+        [contain_both, both_list]
+      ])
+    );
+  }
+}
+function view() {
+  let style = "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300";
+  return button(
+    toList([
+      id("compare-button"),
+      class$(style),
+      on_click(new UserCompareListContents())
+    ]),
+    toList([text("Comparar")])
+  );
+}
+
 // build/dev/javascript/app/views/switch_button.mjs
 var UserSwitchListContents = class extends CustomType {
 };
-function update(model, msg) {
+function update2(model, msg) {
   {
     let $ = get(model, left);
     if (!$.isOk()) {
@@ -3255,7 +3332,7 @@ function update(model, msg) {
     );
   }
 }
-function view() {
+function view2() {
   let style = "p-4 bg-slate-400 items-center self-center w-12 hover:bg-slate-200 transition delay-75 duration-300 ease-in-out";
   return button(
     toList([
@@ -3531,7 +3608,7 @@ function clipboard(data) {
     }
   );
 }
-function update2(model, msg) {
+function update3(model, msg) {
   if (msg instanceof UserListTyping) {
     let name = msg[0];
     let content = msg[1];
@@ -3671,8 +3748,6 @@ function text_area(name, content) {
 }
 
 // build/dev/javascript/app/app.mjs
-var UserCompareListContents = class extends CustomType {
-};
 var TextViewMsg = class extends CustomType {
   constructor(x0) {
     super();
@@ -3680,6 +3755,12 @@ var TextViewMsg = class extends CustomType {
   }
 };
 var SwitchViewMsg = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var CompareViewMsg = class extends CustomType {
   constructor(x0) {
     super();
     this[0] = x0;
@@ -3696,67 +3777,11 @@ function init2(_) {
     ])
   );
 }
-function update3(model, msg) {
-  if (msg instanceof UserCompareListContents) {
-    let $ = get(model, left);
-    if (!$.isOk()) {
-      throw makeError(
-        "let_assert",
-        "app",
-        40,
-        "update",
-        "Pattern match failed, no pattern matched the value.",
-        { value: $ }
-      );
-    }
-    let left_list = $[0];
-    let $1 = get(model, right);
-    if (!$1.isOk()) {
-      throw makeError(
-        "let_assert",
-        "app",
-        41,
-        "update",
-        "Pattern match failed, no pattern matched the value.",
-        { value: $1 }
-      );
-    }
-    let right_list = $1[0];
-    let only_left_list = filter(
-      left_list,
-      (x) => {
-        return !contains(right_list, x);
-      }
-    );
-    let only_right_list = filter(
-      right_list,
-      (x) => {
-        return !contains(left_list, x);
-      }
-    );
-    let both_list = (() => {
-      let _pipe = concat(toList([left_list, right_list]));
-      let _pipe$1 = filter(
-        _pipe,
-        (x) => {
-          return !contains(only_left_list, x) && !contains(
-            only_right_list,
-            x
-          );
-        }
-      );
-      return unique(_pipe$1);
-    })();
-    return from_list(
-      toList([
-        [left, left_list],
-        [right, right_list],
-        [only_left, only_left_list],
-        [only_right, only_right_list],
-        [contain_both, both_list]
-      ])
-    );
-  } else if (msg instanceof TextViewMsg) {
+function update4(model, msg) {
+  if (msg instanceof TextViewMsg) {
+    let msg$1 = msg[0];
+    return update3(model, msg$1);
+  } else if (msg instanceof SwitchViewMsg) {
     let msg$1 = msg[0];
     return update2(model, msg$1);
   } else {
@@ -3764,24 +3789,13 @@ function update3(model, msg) {
     return update(model, msg$1);
   }
 }
-function compare_button() {
-  let style = "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent hover:text-white hover:bg-indigo-600 transition delay-75 duration-300";
-  return button(
-    toList([
-      id("compare-button"),
-      class$(style),
-      on_click(new UserCompareListContents())
-    ]),
-    toList([text("Comparar")])
-  );
-}
-function view2(model) {
+function view3(model) {
   let $ = get(model, left);
   if (!$.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      70,
+      47,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
@@ -3793,7 +3807,7 @@ function view2(model) {
     throw makeError(
       "let_assert",
       "app",
-      71,
+      48,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $1 }
@@ -3805,7 +3819,7 @@ function view2(model) {
     throw makeError(
       "let_assert",
       "app",
-      73,
+      50,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $2 }
@@ -3817,7 +3831,7 @@ function view2(model) {
     throw makeError(
       "let_assert",
       "app",
-      74,
+      51,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $3 }
@@ -3829,7 +3843,7 @@ function view2(model) {
     throw makeError(
       "let_assert",
       "app",
-      76,
+      53,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $4 }
@@ -3851,7 +3865,7 @@ function view2(model) {
             }
           ),
           map5(
-            view(),
+            view2(),
             (a) => {
               return new SwitchViewMsg(a);
             }
@@ -3864,7 +3878,12 @@ function view2(model) {
           )
         ])
       ),
-      compare_button(),
+      map5(
+        view(),
+        (a) => {
+          return new CompareViewMsg(a);
+        }
+      ),
       div(
         toList([
           id("view-comparison-lists"),
@@ -3903,13 +3922,13 @@ function view2(model) {
   );
 }
 function main() {
-  let app = simple(init2, update3, view2);
+  let app = simple(init2, update4, view3);
   let $ = start2(app, "#app", void 0);
   if (!$.isOk()) {
     throw makeError(
       "let_assert",
       "app",
-      14,
+      15,
       "main",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }

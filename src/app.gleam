@@ -6,6 +6,7 @@ import lustre/element
 import lustre/element/html
 import lustre/event
 import storage/constants
+import views/compare_button
 import views/switch_button
 import views/text_view
 
@@ -19,9 +20,9 @@ pub type Model =
   dict.Dict(String, List(String))
 
 pub type Msg {
-  UserCompareListContents
   TextViewMsg(text_view.TextAreaMsg)
   SwitchViewMsg(switch_button.SwitchListMsg)
+  CompareViewMsg(compare_button.CompareListMsg)
 }
 
 pub fn init(_flags) -> Model {
@@ -36,33 +37,9 @@ pub fn init(_flags) -> Model {
 
 pub fn update(model: Model, msg: Msg) -> Model {
   case msg {
-    UserCompareListContents -> {
-      let assert Ok(left_list) = dict.get(model, constants.left)
-      let assert Ok(right_list) = dict.get(model, constants.right)
-
-      let only_left_list =
-        list.filter(left_list, fn(x) { !list.contains(right_list, x) })
-      let only_right_list =
-        list.filter(right_list, fn(x) { !list.contains(left_list, x) })
-
-      let both_list =
-        list.concat([left_list, right_list])
-        |> list.filter(fn(x) {
-          !list.contains(only_left_list, x)
-          && !list.contains(only_right_list, x)
-        })
-        |> list.unique
-
-      dict.from_list([
-        #(constants.left, left_list),
-        #(constants.right, right_list),
-        #(constants.only_left, only_left_list),
-        #(constants.only_right, only_right_list),
-        #(constants.contain_both, both_list),
-      ])
-    }
     TextViewMsg(msg) -> text_view.update(model, msg)
     SwitchViewMsg(msg) -> switch_button.update(model, msg)
+    CompareViewMsg(msg) -> compare_button.update(model, msg)
   }
 }
 
@@ -94,7 +71,9 @@ pub fn view(model: Model) -> element.Element(Msg) {
         fn(a: text_view.TextAreaMsg) { TextViewMsg(a) },
       ),
     ]),
-    compare_button(),
+    element.map(compare_button.view(), fn(a: compare_button.CompareListMsg) {
+      CompareViewMsg(a)
+    }),
     html.div(
       [attribute.id("view-comparison-lists"), attribute.class(view_list_style)],
       [
@@ -118,19 +97,4 @@ pub fn view(model: Model) -> element.Element(Msg) {
       ],
     ),
   ])
-}
-
-fn compare_button() {
-  let style =
-    "rounded-md text-indigo-600 border-2 border-indigo-600 p-4 bg-transparent"
-    <> " hover:text-white hover:bg-indigo-600 transition delay-75 duration-300"
-
-  html.button(
-    [
-      attribute.id("compare-button"),
-      attribute.class(style),
-      event.on_click(UserCompareListContents),
-    ],
-    [element.text("Comparar")],
-  )
 }
