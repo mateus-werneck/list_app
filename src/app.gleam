@@ -1,18 +1,11 @@
 import gleam/dict
-import gleam/int
-import gleam/javascript/promise
 import gleam/list
-import gleam/option
-import gleam/string
 import lustre
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/event
-import plinth/browser/clipboard
-import plinth/browser/window
-import string/lines
-import views/text_area
+import views/text_view
 
 pub const left: String = "left-list"
 
@@ -36,6 +29,7 @@ pub type Model =
 pub type Msg {
   UserSwitchListContents
   UserCompareListContents
+  TextViewMsg(text_view.TextAreaMsg)
 }
 
 pub fn init(_flags) -> Model {
@@ -93,39 +87,7 @@ pub fn update(model: Model, msg: Msg) -> Model {
         #(contain_both, both_list),
       ])
     }
-
-    UserListTyping(name, content) ->
-      dict.merge(model, dict.from_list([#(name, lines.text_to_lines(content))]))
-
-    UserTrimListSpaces(name) -> {
-      let trim = fn(x) {
-        case x {
-          option.Some(current_list) ->
-            list.filter(current_list, fn(e) { e != "" && e != "\n" })
-          option.None -> []
-        }
-      }
-
-      dict.upsert(model, name, trim)
-    }
-
-    UserSortList(name) -> {
-      let sort = fn(x) {
-        case x {
-          option.Some(current_list) -> list.sort(current_list, string.compare)
-          option.None -> []
-        }
-      }
-
-      dict.upsert(model, name, sort)
-    }
-
-    UserDeletedList(name) -> dict.merge(model, dict.from_list([#(name, [])]))
-
-    UserCopyList(data) -> {
-      clipboard(data)
-      model
-    }
+    TextViewMsg(msg) -> text_view.update(model, msg)
   }
 }
 
@@ -145,28 +107,45 @@ pub fn view(model: Model) -> element.Element(Msg) {
 
   html.div([attribute.id("root"), attribute.class(root_style)], [
     html.div([attribute.id("view-lists"), attribute.class(view_list_style)], [
-      text_area(left, left_list),
+      element.map(
+        text_view.text_area(left, left_list),
+        fn(a: text_view.TextAreaMsg) { TextViewMsg(a) },
+      ),
       switch_button(),
-      text_area(right, right_list),
+      element.map(
+        text_view.text_area(right, right_list),
+        fn(a: text_view.TextAreaMsg) { TextViewMsg(a) },
+      ),
     ]),
     compare_button(),
     html.div(
       [attribute.id("view-comparison-lists"), attribute.class(view_list_style)],
       [
-        text_area(only_left, only_left_list),
-        text_area(only_right, only_right_list),
+        element.map(
+          text_view.text_area(only_left, only_left_list),
+          fn(a: text_view.TextAreaMsg) { TextViewMsg(a) },
+        ),
+        element.map(
+          text_view.text_area(only_right, only_right_list),
+          fn(a: text_view.TextAreaMsg) { TextViewMsg(a) },
+        ),
       ],
     ),
     html.div(
       [attribute.id("view-both-lists"), attribute.class(view_list_style)],
-      [text_area(contain_both, both_list)],
+      [
+        element.map(
+          text_view.text_area(contain_both, both_list),
+          fn(a: text_view.TextAreaMsg) { TextViewMsg(a) },
+        ),
+      ],
     ),
   ])
 }
 
 fn switch_button() {
   let style =
-    "p-4 bg-slate-400 items-center self-center"
+    "p-4 bg-slate-400 items-center self-center w-12"
     <> " hover:bg-slate-200 transition delay-75 duration-300 ease-in-out"
 
   html.button(
@@ -196,114 +175,5 @@ fn compare_button() {
       event.on_click(UserCompareListContents),
     ],
     [element.text("Comparar")],
-  )
-}
-
-fn clipboard(data: String) {
-  promise.await(clipboard.write_text(data), fn(result) {
-    case result {
-      Ok(_) ->
-        promise.new(fn(_) {
-          window.alert("Copiado para área de transferência.")
-          Nil
-        })
-      Error(_) -> {
-        promise.new(fn(_) {
-          window.alert("Falha ao copiar lista para área de transferência")
-          Nil
-        })
-      }
-    }
-  })
-}
-
-fn text_area(name: String, content: List(String)) -> element.Element(Msg) {
-  let text = string.join(content, with: "")
-
-  let count =
-    lines.count_text_lines(content)
-    |> int.to_string
-
-  let text_area_style =
-    "w-80 lg:w-[540px] 2xl:w-[720px] h-48 lg:h-96 p-2 outline-none"
-    <> " bg-white border-2 border-slate-200"
-
-  let action_buttons_style =
-    "flex flex-row items-center gap-4 bg-slate-100 p-4 shadow-md"
-
-  html.div([attribute.id(name)], [
-    html.div([], [
-      html.textarea(
-        [
-          attribute.id(name),
-          attribute.class(text_area_style),
-          event.on_input(fn(value) { UserListTyping(name, value) }),
-        ],
-        text,
-      ),
-      text_counter("counter-" <> name, count),
-    ]),
-    html.div(
-      [attribute.id("actions-" <> name), attribute.class(action_buttons_style)],
-      [
-        action_button(
-          "trim-" <> name,
-          "Remover espaços em branco",
-          "/priv/static/images/trim.svg",
-          UserTrimListSpaces(name),
-        ),
-        action_button(
-          "sort-" <> name,
-          "Ordernar lista",
-          "/priv/static/images/sort-asc.svg",
-          UserSortList(name),
-        ),
-        action_button(
-          "copy-" <> name,
-          "Copiar para área de transferência",
-          "/priv/static/images/copy.svg",
-          UserCopyList(string.join(content, "")),
-        ),
-        action_button(
-          "delete-" <> name,
-          "Apagar conteúdo",
-          "/priv/static/images/delete.svg",
-          UserDeletedList(name),
-        ),
-      ],
-    ),
-  ])
-}
-
-fn text_counter(name: String, count: String) {
-  let zero_counter_style =
-    "flex flex-row  text-slate-200 z-10 relative mt-[-1.75rem] mr-4 justify-end"
-  let counter_style =
-    "flex flex-row text-black z-10 relative mt-[-1.75rem] mr-4 justify-end"
-
-  html.span(
-    [
-      attribute.id(name),
-      case count == "0" {
-        True -> attribute.class(zero_counter_style)
-        False -> attribute.class(counter_style)
-      },
-    ],
-    [element.text(count)],
-  )
-}
-
-fn action_button(name: String, title: String, img: String, msg: Msg) {
-  let style =
-    "items-center self-center hover:filter hover:invert transition delay-100 duration-300"
-
-  html.button(
-    [
-      attribute.id(name),
-      attribute.title(title),
-      attribute.class(style),
-      event.on_click(msg),
-    ],
-    [html.img([attribute.src(img), attribute.class("w-6")])],
   )
 }
