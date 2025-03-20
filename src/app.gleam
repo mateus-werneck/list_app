@@ -1,10 +1,8 @@
 import gleam/dict
-import gleam/list
 import lustre
 import lustre/attribute
 import lustre/element
 import lustre/element/html
-import lustre/event
 import storage/constants
 import views/compare_button
 import views/switch_button
@@ -52,10 +50,10 @@ pub fn view(model: Model) -> element.Element(Msg) {
 
   let assert Ok(both_list) = dict.get(model, constants.contain_both)
 
-  let root_style = "flex flex-col px-4 py-16  m-auto gap-16 items-center"
+  let root_style = "flex flex-col px-4 py-16 m-auto gap-16 items-center"
 
   let view_list_style =
-    "flex flex-col md:flex-row m-auto gap-4 px-4 items-center"
+    "flex flex-col xl:flex-row m-auto gap-4 px-4 items-center"
 
   html.div([attribute.id("root"), attribute.class(root_style)], [
     html.div([attribute.id("view-lists"), attribute.class(view_list_style)], [

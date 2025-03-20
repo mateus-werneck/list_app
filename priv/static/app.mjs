@@ -3157,6 +3157,13 @@ function textarea(attrs, content) {
   return element("textarea", attrs, toList([text(content)]));
 }
 
+// build/dev/javascript/app/storage/constants.mjs
+var left = "left-list";
+var right = "right-list";
+var only_left = "only-left-list";
+var only_right = "only-right-list";
+var contain_both = "contain-both-list";
+
 // build/dev/javascript/lustre/lustre/event.mjs
 function on2(name, handler) {
   return on(name, handler);
@@ -3181,13 +3188,6 @@ function on_input(msg) {
     }
   );
 }
-
-// build/dev/javascript/app/storage/constants.mjs
-var left = "left-list";
-var right = "right-list";
-var only_left = "only-left-list";
-var only_right = "only-right-list";
-var contain_both = "contain-both-list";
 
 // build/dev/javascript/app/views/compare_button.mjs
 var UserCompareListContents = class extends CustomType {
@@ -3795,7 +3795,7 @@ function view3(model) {
     throw makeError(
       "let_assert",
       "app",
-      47,
+      45,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
@@ -3807,7 +3807,7 @@ function view3(model) {
     throw makeError(
       "let_assert",
       "app",
-      48,
+      46,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $1 }
@@ -3819,7 +3819,7 @@ function view3(model) {
     throw makeError(
       "let_assert",
       "app",
-      50,
+      48,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $2 }
@@ -3831,7 +3831,7 @@ function view3(model) {
     throw makeError(
       "let_assert",
       "app",
-      51,
+      49,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $3 }
@@ -3843,15 +3843,15 @@ function view3(model) {
     throw makeError(
       "let_assert",
       "app",
-      53,
+      51,
       "view",
       "Pattern match failed, no pattern matched the value.",
       { value: $4 }
     );
   }
   let both_list = $4[0];
-  let root_style = "flex flex-col px-4 py-16  m-auto gap-16 items-center";
-  let view_list_style = "flex flex-col md:flex-row m-auto gap-4 px-4 items-center";
+  let root_style = "flex flex-col px-4 py-16 m-auto gap-16 items-center";
+  let view_list_style = "flex flex-col xl:flex-row m-auto gap-4 px-4 items-center";
   return div(
     toList([id("root"), class$(root_style)]),
     toList([
@@ -3928,7 +3928,7 @@ function main() {
     throw makeError(
       "let_assert",
       "app",
-      15,
+      13,
       "main",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
